@@ -1,11 +1,11 @@
-<div style="display: flex; align-items: flex-start;">
-  <img src="https://techstack-generator.vercel.app/docker-icon.svg" alt="Docker icon" width="65" height="65" />
-  <img src="https://techstack-generator.vercel.app/kubernetes-icon.svg" alt="Kubernetes icon" width="65" height="65" />
-</div>
-
 # Docker & Kubernetes: A Quick Summary
 
 A concise guide to the essential concepts of Docker and Kubernetes. Each chapter overview highlights the key knowledge you’ll gain.
+
+<div style="text-align: center;">
+  <img src="https://techstack-generator.vercel.app/docker-icon.svg" alt="Docker icon" width="90" height="90" />
+  <img src="https://techstack-generator.vercel.app/kubernetes-icon.svg" alt="Kubernetes icon" width="90" height="90" />
+</div>
 
 ---
 
