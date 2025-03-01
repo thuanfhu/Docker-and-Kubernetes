@@ -1,63 +1,28 @@
-# 📝 Docker: Image Layers & Caching
+# 📝 Docker: Container & Image - Cơ Chế Hoạt Động
 
-## 📌 Image Layers trong Docker
-
-Docker Image không phải là một file đơn lẻ, mà được tạo thành từ **nhiều lớp (layers)**. Mỗi câu lệnh trong `Dockerfile` tạo ra một layer mới.
-
-🛠 **Ví dụ về layers trong Dockerfile:**
-
-```dockerfile
-FROM node:18      # Layer 1: Image base
-WORKDIR /app      # Layer 2: Thiết lập thư mục làm việc
-COPY package*.json ./  # Layer 3: Copy package.json để caching
-RUN npm install   # Layer 4: Cài đặt dependencies
-COPY . ./         # Layer 5: Copy toàn bộ source code
-CMD ["node", "server.js"]  # Layer 6: Lệnh khởi động
-```
+## 📌 Container có copy lại source code và environment nhiều lần không?
+Khi Docker tạo container từ image, nó **không copy lại source code hay environment nhiều lần**. Thay vào đó, container **sử dụng lại image gốc** và chỉ tạo thêm một **Writable Layer** để ghi dữ liệu thay đổi.
 
 ---
 
-## 🚀 **Cơ chế cache của Dockerfile**
+## 🛠 **Cơ chế hoạt động của Container từ Image**
+Docker sử dụng kiến trúc **UnionFS (Union File System)** để quản lý file giữa Image và Container:
 
-Docker sử dụng **caching thông minh** để tăng tốc quá trình build. Khi một layer không thay đổi, Docker sẽ sử dụng lại cache thay vì build lại.
+1. **Image (Read-Only Layers)**: 
+   - Chứa tất cả source code, dependencies, hệ điều hành base,...
+   - Không thể thay đổi sau khi đã build.
+2. **Writable Layer (Container Layer)**:
+   - Khi container chạy, Docker thêm một **Writable Layer** phía trên Image.
+   - Mọi thay đổi (ghi file, cài thêm package, chỉnh sửa code trong container) chỉ xảy ra trên layer này.
 
-📌 **Cách cache hoạt động:**
-
-- Nếu Docker thấy một lệnh (`RUN`, `COPY`, ...) **giống hệt** với build trước, nó sẽ **dùng lại layer đã cache**.
-- Khi một layer thay đổi, **tất cả các layer sau đó cũng bị build lại**.
-
----
-
-## ❓ **Tại sao nên COPY package**\*.json và RUN npm install trước?
-
-### ✅ **Cách tối ưu Dockerfile để tận dụng cache:**
-
-```dockerfile
-FROM node:18
-WORKDIR /app
-COPY package*.json ./  # Copy file package.json trước
-RUN npm install         # Cài đặt dependencies (chỉ chạy lại nếu package.json thay đổi)
-COPY . ./               # Copy toàn bộ source code sau cùng
-CMD ["node", "server.js"]
-```
-
-### 🔥 **Lợi ích của việc làm này:**
-
-1. **Tận dụng cache tối đa:**
-   - Nếu bạn chỉ thay đổi code (không thay đổi `package.json`), Docker sẽ \*\*không chạy lại \*\***`npm install`** → Tiết kiệm thời gian build.
-   - Nếu bạn đổi package hoặc thêm thư viện, Docker chỉ build lại từ `RUN npm install` trở đi.
-2. **Giảm thời gian build đáng kể**, đặc biệt với dự án lớn.
-
-📌 **Sai lầm thường gặp:** Nếu bạn `COPY . ./` trước `RUN npm install`, Docker sẽ mất cache khi có bất kỳ thay đổi nào trong code, khiến nó phải cài lại toàn bộ dependencies mỗi lần build.
+📌 **Lưu ý:** Khi container bị xóa (`docker rm`), tất cả dữ liệu trong Writable Layer cũng bị mất.
 
 ---
 
-## 📌 Kết luận
+## ❓ **Container có sử dụng lại image không?**
+✅ **Có!** Container chỉ sử dụng lại Image gốc mà không copy lại nhiều lần.
 
-✅ **Docker Image gồm nhiều layers**, mỗi câu lệnh tạo một layer.
+- Khi chạy `docker run IMAGE_ID`, Docker lấy Image gốc và tạo một container mới dựa trên nó.
+- Nếu bạn chạy nhiều container từ cùng một Image, chúng **sẽ chia sẻ Image gốc**, chỉ có phần dữ liệu thay đổi là riêng biệt.
 
-✅ **Docker cache các layers để tối ưu build**, nhưng chỉ khi nội dung không thay đổi.
-
-✅ **COPY package.json trước RUN npm install** giúp giảm thời gian build.
-
-🚀 **Tận dụng cache đúng cách = Build nhanh hơn, tiết kiệm tài nguyên!**
+---
