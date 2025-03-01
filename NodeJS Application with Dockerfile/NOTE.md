@@ -1,76 +1,65 @@
-# Notes về Các Lệnh Docker
+# 📝 Docker: Images are Read Only!
 
-## 1. `docker build .`
-Lệnh này dùng để **xây dựng một image từ Dockerfile**.
+## 📌 Images trong Docker là "Read Only"
 
-### **Dấu `.` là gì?**
-- Dấu `.` đại diện cho **thư mục hiện tại**, nơi Docker sẽ tìm **Dockerfile** để xây dựng image.
-- Nếu muốn chỉ định thư mục khác, có thể thay `.` bằng đường dẫn cụ thể, ví dụ:
-  ```sh
-  docker build /path/to/directory
-  ```
-- Nếu muốn đặt tên cho image, dùng `-t`:
-  ```sh
-  docker build -t my-node-app .
-  ```
-  Lệnh này tạo ra image có tên `my-node-app`.
+Docker Images là **bất biến (immutable)**, tức là chúng **không thể bị thay đổi** sau khi đã được tạo. Mọi container được khởi chạy từ image sẽ sử dụng đúng dữ liệu ban đầu của image mà **không bị ảnh hưởng bởi các thay đổi bên ngoài**.
 
 ---
 
-## 2. `docker run IMAGE_ID`
-Lệnh này dùng để **tạo và chạy một container từ image đã có**.
+## ❓ Tại sao khi thay đổi source code, container mới vẫn dùng code cũ?
 
-### **Giải thích**
-- `IMAGE_ID`: ID của image mà bạn muốn chạy.
-- Nếu không biết IMAGE_ID, có thể dùng tên của image:
-  ```sh
-  docker run my-node-app
-  ```
-- Khi chạy lệnh này, Docker sẽ tạo ra một container từ image đã có và khởi chạy nó.
+Khi bạn build một Docker Image từ `Dockerfile`, nó tạo ra một **bản snapshot cố định** của source code và các dependencies.
 
----
+🛠 **Ví dụ:**
 
-## 3. `docker stop CONTAINER_ID`
-Lệnh này dùng để **dừng một container đang chạy**.
+```dockerfile
+FROM node:18
+WORKDIR /app
+COPY . .
+RUN npm install
+CMD ["node", "server.js"]
+```
 
-### **Giải thích**
-- `CONTAINER_ID`: ID của container mà bạn muốn dừng.
-- Nếu không nhớ ID, xem danh sách container đang chạy bằng:
-  ```sh
-  docker ps
-  ```
-- Sau đó, dùng:
-  ```sh
-  docker stop <CONTAINER_ID>
-  ```
-  để dừng container đó.
+-   `COPY . .` sao chép mã nguồn vào image.
+-   Khi image được build (`docker build -t my-app .`), nó đóng gói source code vào image.
+-   Mọi container tạo ra từ image này đều **dùng source code cũ** (tại thời điểm build), ngay cả khi bạn thay đổi mã nguồn gốc trên máy.
+
+📌 **Lý do:** Docker không tự động cập nhật image khi bạn thay đổi source code.
 
 ---
 
-## 4. `docker run -p 3000:80 IMAGE_ID`
-Lệnh này dùng để **chạy container và ánh xạ cổng giữa container và máy chủ**.
+## 🔄 Cách cập nhật source code khi chạy container
 
-### **Giải thích `-p 3000:80`**
-- `-p` (publish): Dùng để ánh xạ (mapping) **cổng từ localhost vào container**.
-- `3000:80`:
-  - **3000** → Cổng trên **máy chủ (localhost)**.
-  - **80** → Cổng bên trong **container**.
+### ✅ **Cách 1: Build lại image** (Phù hợp với production)
 
-### **Ví dụ**
-- Nếu ứng dụng trong container chạy trên cổng **80**, nhưng bạn muốn truy cập từ `localhost:3000`, bạn dùng `-p 3000:80`.
-- Sau đó, bạn có thể mở trình duyệt và truy cập:
-  ```
-  http://localhost:3000
-  ```
+Nếu bạn thay đổi source code, cần build lại image:
+
+```sh
+docker build -t my-app .
+```
+
+Sau đó, chạy container mới từ image mới:
+
+```sh
+docker run -p 3000:3000 my-app
+```
+
+### ✅ **Cách 2: Dùng Volume để mount source code** (Phù hợp với development)
+
+Thay vì copy code vào image, bạn có thể **mount thư mục chứa source code vào container**:
+
+```sh
+docker run -p 3000:3000 -v $(pwd):/app my-app
+```
+
+-   `-v $(pwd):/app` gán thư mục hiện tại (`$(pwd)`) vào thư mục `/app` trong container.
+-   Khi bạn sửa code trên máy, container sẽ thấy thay đổi ngay lập tức.
 
 ---
 
-## **Tóm tắt nhanh**
-| Lệnh | Mô tả |
-|------|------|
-| `docker build .` | Xây dựng image từ Dockerfile trong thư mục hiện tại |
-| `docker run IMAGE_ID` | Chạy container từ image đã có |
-| `docker stop CONTAINER_ID` | Dừng container đang chạy |
-| `docker run -p 3000:80 IMAGE_ID` | Chạy container và ánh xạ cổng 3000 trên máy chủ với cổng 80 trong container |
+## 📌 Kết luận
 
----
+✅ Docker Images là **bất biến (Read Only)**, source code không thay đổi khi tạo container mới.  
+✅ Nếu cần cập nhật code, bạn phải **build lại image** hoặc **dùng Volume để mount source code**.
+
+🚀 **Dùng volume cho development, build lại image cho production!**
