@@ -1,100 +1,192 @@
-# 🖥️ Docker Interactive Mode: Tương Tác Hiệu Quả Với Container
+# 🗑️ Docker: Deleting Images & Containers
 
-## 🔹 1. Interactive Mode trong Docker là gì?
+## 🔹 1. Điều kiện để xóa Container và Image
 
-Interactive Mode cho phép người dùng tương tác trực tiếp với container thông qua terminal. Điều này rất hữu ích khi cần chạy ứng dụng có nhập liệu từ bàn phím hoặc kiểm tra bên trong container.
+Trước khi xóa Container hoặc Image, cần hiểu một số điều kiện quan trọng:
 
-Khi container được chạy ở chế độ này, bạn có thể nhập lệnh, kiểm tra trạng thái, hoặc thực thi chương trình ngay trong môi trường container.
+### 🛑 Không thể xóa Container đang chạy
+
+- Nếu container đang chạy, bạn **không thể xóa** nó ngay lập tức.
+- Cần **dừng container trước** khi xóa.
+
+✅ **Dừng và xóa container:**
+
+```sh
+docker stop <CONTAINER_ID>
+docker rm <CONTAINER_ID>
+```
+
+✅ **Xóa container đang chạy bằng cách ép buộc:**
+
+```sh
+docker rm -f <CONTAINER_ID>
+```
+
+### 🛑 Không thể xóa Image đang được container sử dụng
+
+- Nếu một Image đang có container chạy hoặc đã được tạo từ nó, **không thể xóa Image** trừ khi container đó bị xóa trước.
+
+✅ **Kiểm tra container nào đang sử dụng Image:**
+
+```sh
+docker ps -a --filter ancestor=<IMAGE_ID>
+```
+
+✅ **Xóa container trước khi xóa Image:**
+
+```sh
+docker rm <CONTAINER_ID>
+docker rmi <IMAGE_ID>
+```
+
+### 🛑 Dangling Images là gì?
+
+- **Dangling images** là những images không có tag và không được tham chiếu bởi bất kỳ container nào.
+- Chúng thường xuất hiện sau khi build image mới mà không gán tag.
+
+✅ **Kiểm tra dangling images:**
+
+```sh
+docker images -f dangling=true
+```
+
+✅ **Xóa tất cả dangling images:**
+
+```sh
+docker image prune
+```
+
+📌 **Lưu ý:** Dangling images không có container nào sử dụng nên có thể xóa an toàn.
 
 ---
 
-## 🔹 2. Cách chạy container ở chế độ Interactive
+## 🔹 2. Xóa Containers
 
-### 📌 Lệnh cơ bản:
-
-```sh
-docker run -it ubuntu bash
-```
-
-**Giải thích:**
-
-- `-i` (interactive): Giữ kết nối đầu vào từ bàn phím.
-- `-t` (tty): Cấp phát một terminal ảo.
-- `ubuntu`: Tên image được sử dụng.
-- `bash`: Lệnh shell chạy bên trong container.
-
-Sau khi chạy, bạn sẽ thấy terminal chuyển sang môi trường bên trong container:
+### 🗑️ Xóa một container cụ thể
 
 ```sh
-root@container-id:/#
+docker rm <CONTAINER_ID>
 ```
 
-Lúc này, bạn có thể gõ lệnh như trên một máy Linux thông thường.
+### 🗑️ Xóa nhiều containers cùng lúc
+
+```sh
+docker rm <CONTAINER_ID_1> <CONTAINER_ID_2> <CONTAINER_ID_3>
+```
+
+### 🚀 Xóa tất cả containers đã dừng
+
+```sh
+docker container prune
+```
+
+- **Lệnh này sẽ xóa tất cả containers đã bị dừng**.
+- **Cần xác nhận trước khi xóa** (có thể bỏ qua bằng `-f`).
+
+```sh
+docker container prune -f
+```
+
+📌 **Lưu ý:** Containers đang chạy sẽ **không bị xóa** khi sử dụng `docker container prune`.
 
 ---
 
-## 🔹 3. Lỗi gặp phải khi chạy Interactive Mode và cách khắc phục
+## 🔹 3. Xóa Images
 
-### ❌ Lỗi: `EOFError: EOF when reading a line`
-
-**Lỗi:**
+### 🗑️ Xóa một image cụ thể
 
 ```sh
-docker run sha256:c9df4e84149cf7ca6a4924129bed8af57c53adb54351b35cb89f8c39b4b0c5a2
+docker rmi <IMAGE_ID>
 ```
 
-**Nguyên nhân:**
-
-- Lỗi này xảy ra khi `input()` trong Python cố gắng đọc dữ liệu nhưng không có đầu vào nào được cung cấp.
-- Thường gặp khi container chạy mà không có terminal kết nối.
-
-**Cách khắc phục:**
-
-Chạy container với chế độ interactive:
+### 🗑️ Xóa nhiều images cùng lúc
 
 ```sh
-docker run -it sha256:c9df4e84149cf7ca6a4924129bed8af57c53adb54351b35cb89f8c39b4b0c5a2
+docker rmi <IMAGE_ID_1> <IMAGE_ID_2> <IMAGE_ID_3>
 ```
 
-- `-i`: Cho phép nhập dữ liệu từ bàn phím.
-- `-t`: Cấp phát terminal ảo.
+### 🚀 Xóa tất cả images không sử dụng
+
+```sh
+docker image prune
+```
+
+- **Chỉ xóa images không có container nào đang sử dụng.**
+
+Nếu muốn xóa **tất cả images không sử dụng và dangling images**, chạy:
+
+```sh
+docker image prune -a
+```
+
+📌 **Lưu ý:** Nếu một image đang được container sử dụng, bạn **không thể xóa nó** trừ khi xóa container trước.
+
+✅ **Xóa container trước khi xóa image:**
+
+```sh
+docker rm <CONTAINER_ID>
+docker rmi <IMAGE_ID>
+```
 
 ---
 
-### ❌ Lỗi khi chạy `docker start <CONTAINER_ID>`
+## 🔹 4. Kiểm tra danh sách Containers và Images
 
-**Nguyên nhân:**
+### 📋 Danh sách tất cả containers
 
-- Nếu container đã bị **stop trước đó**, khi chạy `docker start <CONTAINER_ID>` thì container sẽ khởi động nhưng **không hiển thị output** vì mặc định nó chạy ở chế độ detached.
-- Nếu container yêu cầu input (`input()` trong Python chẳng hạn), nó có thể bị lỗi hoặc dừng ngay lập tức vì không có terminal tương tác.
+```sh
+docker ps -a
+```
 
-**Cách khắc phục:**
+### 📋 Danh sách tất cả images
 
-1. Nếu muốn thấy output của container khi chạy lại, sử dụng `-a`:
+```sh
+docker images
+```
 
-   ```sh
-   docker start -a <CONTAINER_ID>
-   ```
+### 📋 Kiểm tra containers đã dừng
 
-   *Nhưng nếu container yêu cầu nhập dữ liệu, lệnh này có thể vẫn bị lỗi.*
-
-2. Nếu container yêu cầu nhập dữ liệu, bạn cần chạy với interactive mode:
-
-   ```sh
-   docker start -a -i <CONTAINER_ID>
-   ```
-
-   - `-a`: Hiển thị output của container.
-   - `-i`: Cho phép nhập dữ liệu từ bàn phím.
+```sh
+docker ps -f status=exited
+```
 
 ---
 
-## 🔹 4. Tóm lược
+## 🔹 5. Xóa tất cả Containers và Images cùng lúc
 
-✔️ **Interactive Mode** giúp bạn kiểm tra và làm việc trong container như trên một hệ thống thực tế.
+🚀 **Xóa tất cả containers và images không sử dụng**:
 
-✔️ **Dùng ************************`-it`************************ để giữ terminal hoạt động và nhận input từ bàn phím.**
+```sh
+docker system prune
+```
 
-✔️ **Nếu container yêu cầu input, sử dụng ************************`docker start -a -i`************************ thay vì ************************`docker start -a`************************.**&#x20;
+🚀 **Xóa tất cả containers và images bao gồm cả những cái đang bị dangling**:
 
-✔️ **Kiểm tra logs và image nếu gặp lỗi khi chạy.**
+```sh
+docker system prune -a
+```
+
+📌 **Lưu ý:**
+
+- `docker system prune` **không xóa containers đang chạy**.
+- `docker system prune -a` **xóa tất cả images không dùng đến**.
+
+---
+
+## 🔹 6. Tóm lược
+
+✔️ **Không thể xóa container đang chạy, cần stop trước**
+
+✔️ **Không thể xóa Image nếu có container sử dụng nó**
+
+✔️ **Dangling images là những images không có tag và không được tham chiếu bởi container nào**
+
+✔️ **Dùng `docker container prune` để xóa containers đã dừng**
+
+✔️ **Dùng `docker image prune` để xóa images không sử dụng**
+
+✔️ **Dùng `docker system prune` để dọn dẹp toàn bộ Docker**
+
+✔️ **Kiểm tra containers và images trước khi xóa để tránh mất dữ liệu**
+
+🚀 **Dọn dẹp Docker đúng cách giúp tiết kiệm tài nguyên và tối ưu hệ thống!**
