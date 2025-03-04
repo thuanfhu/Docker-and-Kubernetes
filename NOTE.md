@@ -41,8 +41,10 @@ docker rmi <IMAGE_ID>
 
 ### 🛑 Dangling Images là gì?
 
-- **Dangling images** là những images không có tag và không được tham chiếu bởi bất kỳ container nào.
-- Chúng thường xuất hiện sau khi build image mới mà không gán tag.
+- **Dangling images** là những images **không có tag hợp lệ** (`<none>`), thường xuất hiện khi:
+  - Build một image mới mà không gán tag.
+  - Một image cũ bị thay thế trong quá trình build.
+- Chúng **không được tham chiếu bởi bất kỳ container nào** nhưng không phải tất cả images không sử dụng đều là dangling images.
 
 ✅ **Kiểm tra dangling images:**
 
@@ -56,7 +58,24 @@ docker images -f dangling=true
 docker image prune
 ```
 
-📌 **Lưu ý:** Dangling images không có container nào sử dụng nên có thể xóa an toàn.
+📌 **Lưu ý:** `docker image prune` **chỉ xóa dangling images**.
+
+✅ **Xóa tất cả images không sử dụng (bao gồm cả dangling images và images có tag nhưng không container nào tham chiếu):**
+
+```sh
+docker image prune -a
+```
+
+📌 **Khác biệt giữa `docker image prune` và `docker image prune -a`:**
+- `docker image prune` **chỉ xóa dangling images** (images có tag `<none>`).
+- `docker image prune -a` **xóa tất cả images không có container nào tham chiếu**, bao gồm cả dangling images và những images có tag nhưng không được sử dụng.
+- **Nếu container của image bị stop nhưng chưa bị xóa, `docker image prune -a` vẫn không thể xóa image đó.**
+
+✅ **Xóa container trước khi chạy `docker image prune -a`:**
+```sh
+docker rm <CONTAINER_ID>
+docker image prune -a
+```
 
 ---
 
@@ -106,14 +125,6 @@ docker rmi <IMAGE_ID_1> <IMAGE_ID_2> <IMAGE_ID_3>
 ```
 
 ### 🚀 Xóa tất cả images không sử dụng
-
-```sh
-docker image prune
-```
-
-- **Chỉ xóa images không có container nào đang sử dụng.**
-
-Nếu muốn xóa **tất cả images không sử dụng và dangling images**, chạy:
 
 ```sh
 docker image prune -a
@@ -179,11 +190,15 @@ docker system prune -a
 
 ✔️ **Không thể xóa Image nếu có container sử dụng nó**
 
-✔️ **Dangling images là những images không có tag và không được tham chiếu bởi container nào**
+✔️ **Dangling images là những images không có tag hợp lệ (`<none>`) và không được container nào tham chiếu**
+
+✔️ **`docker image prune` chỉ xóa dangling images**
+
+✔️ **`docker image prune -a` xóa tất cả images không có container nào tham chiếu, bao gồm cả dangling images và images có tag nhưng không được sử dụng**
+
+✔️ **Nếu container của image bị stop nhưng chưa bị xóa, `docker image prune -a` vẫn không thể xóa image đó**
 
 ✔️ **Dùng `docker container prune` để xóa containers đã dừng**
-
-✔️ **Dùng `docker image prune` để xóa images không sử dụng**
 
 ✔️ **Dùng `docker system prune` để dọn dẹp toàn bộ Docker**
 
