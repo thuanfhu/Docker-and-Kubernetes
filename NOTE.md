@@ -2,23 +2,17 @@
 
 ## 📌 Tổng Quan
 
-Docker hỗ trợ hai loại lưu trữ dữ liệu bên ngoài: **Volumes** (quản lý bởi Docker) và **Bind Mounts** (quản lý bởi bạn). 
-
-Volumes chia thành **Anonymous Volumes** và **Named Volumes**, giúp lưu trữ dữ liệu vĩnh viễn. 
-
-Named Volumes được quản lý qua lệnh `docker volume`, còn Anonymous Volumes tự động tạo bởi Docker.
+Docker hỗ trợ hai loại lưu trữ dữ liệu bên ngoài: **Volumes** (quản lý bởi Docker) và **Bind Mounts** (quản lý bởi bạn). Volumes chia thành **Anonymous Volumes** và **Named Volumes**, giúp lưu trữ dữ liệu vĩnh viễn. Named Volumes được quản lý qua lệnh `docker volume`, còn Anonymous Volumes tự động tạo bởi Docker.
 
 ---
 
 ## 🚀 Anonymous Volumes Với VOLUME Trong Dockerfile
 
-**Tình Huống**  
-Dockerfile có lệnh: `VOLUME ["/app/feedback"]`
+**Tình Huống**: Dockerfile có lệnh `VOLUME ["/app/feedback"]`
 
 - Quy trình: Image → Container → Khi chạy container, Docker tự động tạo Anonymous Volume cho `/app/feedback`.
 
-**Kiểm tra:**  
-Dùng `docker volume ls` sau khi chạy container: `docker volume ls`
+**Kiểm tra:**: `docker volume ls`
 
 **Kết quả ví dụ:**
 ```
@@ -50,8 +44,7 @@ Theo tài liệu Docker, Anonymous Volumes lưu trên ổ cứng máy chủ tạ
 
 ## 🔍 Named Volumes Với -v
 
-**Tạo Named Volume**  
-Dùng `-v` để tạo Named Volume khi chạy container: `docker run -v my-volume:/app/feedback my-app`
+**Tạo Named Volume**: Dùng `-v` để tạo Named Volume khi chạy container: `docker run -v my-volume:/app/feedback my-app`
 
 - Kết quả: Tạo volume tên `my-volume`, ánh xạ vào `/app/feedback` trong container.
 
