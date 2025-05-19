@@ -1,137 +1,78 @@
-# 📝 Working with Docker Hub: Pushing, Pulling, and Sharing Images
+# 📝 Understanding Data Categories / Different Kinds of Data
 
 ## 📌 Tổng Quan
 
-Docker Hub là kho lưu trữ image mặc định cho Docker, cho phép *push* (đẩy), *pull* (tải), và chia sẻ image. Các lệnh như `docker login`, `docker logout`, `docker push`, `docker pull` giúc quản lý image trên Docker Hub.
+Trong Docker, dữ liệu được chia thành **3 loại chính** dựa trên cách lưu trữ và quản lý:
 
-## 🚀 Các Lệnh Chính
+* 📦 **Application (Code + Environment)**
 
-### 1. `docker login`
+* 🔄 **Temporary App Data**
 
-🔓 Đăng nhập vào Docker Hub để xác thực trước khi push/pull image từ repository cá nhân.
+* 💾 **Permanent App Data**
+
+> 📚 *Tài liệu chính thức của Docker nhấn mạnh cách dữ liệu này tương tác với image và container.*
+
+## 🚀 Các Loại Dữ Liệu
+
+### 1. 📦 Application (Code + Environment)
+
+* **Nguồn:** Được cung cấp bởi developer (bạn) thông qua Dockerfile.
+* **Thời điểm thêm:** Được nhúng vào image trong giai đoạn build.
+* **Đặc tính:** "Fixed" – không thể thay đổi sau khi image được xây dựng.
+* **Quyền truy cập:** Read-only, lưu trữ trong images.
+
+🔧 **Ví dụ:** Code ứng dụng, thư viện, và cấu hình (như `node` và `npm` trong `FROM node:18`).
+
+```Dockerfile
+FROM node:18
+COPY . /app
+RUN npm install
+```
+
+---
+
+### 2. 🔄 Temporary App Data
+
+* **Nguồn:** Được tạo/tải trong container đang chạy (ví dụ: input người dùng).
+* **Thời điểm lưu:** Lưu trong bộ nhớ hoặc file tạm thời.
+* **Đặc tính:** Dynamic và thay đổi, nhưng bị xóa định kỳ hoặc khi container dừng.
+* **Quyền truy cập:** Read + write, lưu trữ trong containers.
+
+🔧 **Ví dụ:** Log tạm thời, cache session.
+
+---
+
+### 3. 💾 Permanent App Data
+
+* **Nguồn:** Được tạo/tải trong container đang chạy (ví dụ: tài khoản người dùng).
+* **Thời điểm lưu:** Lưu trong file hoặc cơ sở dữ liệu, phải tồn tại khi container dừng/khởi động lại.
+* **Đặc tính:** Không được mất khi container dừng/restart.
+* **Quyền truy cập:** Read + write, lưu trữ trong containers & volumes.
+
+🔧 **Ví dụ:** Dữ liệu cơ sở dữ liệu, file cấu hình quan trọng.
 
 ```bash
-docker login
+docker run -v mydata:/app/data my-app
 ```
 
-* Nhập username và password khi được yêu cầu.
-* Lưu thông tin đăng nhập tại `~/.docker/config.json` (mặc định).
+## 🔍 So Sánh Các Loại Dữ Liệu
 
-### 2. `docker logout`
-
-🔑 Đăng xuất khỏi Docker Hub.
-
-```bash
-docker logout
-```
-
-* Xóa thông tin xác thực khỏi `~/.docker/config.json`.
-
-### 3. `docker pull`
-
-📥 Tải image từ Docker Hub về máy cục bộ.
-
-```bash
-docker pull [REPOSITORY]:[TAG]
-```
-
-**Ví dụ:**
-
-```bash
-docker pull myusername/my-app:latest
-```
-
-* Image phải có dạng `username/repository:tag`.
-
-* Nếu không chỉ định tag, mặc định tải `latest`.
-
-* Xem image cục bộ: `docker images`.
-
-### 4. `docker push`
-
-📤 Đẩy image từ máy cục bộ lên Docker Hub.
-
-```bash
-docker push [REPOSITORY]:[TAG]
-```
-
-**Ví dụ:**
-
-```bash
-docker push myusername/my-app:latest
-```
-
-* Image phải có dạng `username/repository:tag`.
-
-* Nếu sai định dạng, đặt lại tên:
-
-```bash
-docker tag my-app:latest myusername/my-app:latest
-```
-
-* Phải đăng nhập trước (docker login).
-
-## 🔍 Sử Dụng Image Từ Docker Hub
-
-### Tạo Container Từ Image
-
-```bash
-docker run -p 3000:3000 myusername/my-app:latest
-```
-
-### 📤 Chia Sẻ Image
-
-* **Public**: Ai cũng có thể pull image (VD: `docker pull myusername/my-app`).
-
-* **Private**: Cần đăng nhập và phân quyền truy cập trên Docker Hub.
-
-## ⚠️ Lưu Ý Quan Trọng
-
-❌ Phiên bản không tự cập nhật:
-Push image mới lên Docker Hub nhưng không pull về, lệnh `docker run` sẽ dùng image cũ (cache).
-
-**Giải pháp:**
-
-```bash
-docker pull myusername/my-app:latest
-docker run myusername/my-app:latest
-```
-
-❌ Định dạng tên image: Phải đúng dạng `username/repository:tag`. Nếu sai, dùng `docker tag` để sửa.
-
-## 🎯 Ví Dụ Thực Tế
-
-```bash
-docker login
-
-docker build -t my-app:latest .
-docker tag my-app:latest myusername/my-app:latest
-
-docker push myusername/my-app:latest
-
-docker pull myusername/my-app:latest
-docker run -p 3000:3000 myusername/my-app:latest
-
-docker images
-```
-
-**Kết quả ví dụ:**
-
-```
-REPOSITORY            TAG       IMAGE ID       CREATED        SIZE
-myusername/my-app     latest    a1b2c3d4e5f6   1 hour ago     900MB
-```
+| 💡 Loại Dữ Liệu    | 🔗 Nguồn               | 📂 Lưu Trữ              | 🔐 Quyền Truy Cập | ⚙️ Đặc Tính              |
+| ------------------ | ---------------------- | ----------------------- | ----------------- | ------------------------ |
+| Application        | Developer (Dockerfile) | 📦 Images               | 🔒 Read-only      | 🧱 Fixed, không thay đổi |
+| Temporary App Data | Container đang chạy    | 🗂️ Containers (bộ nhớ) | ✍️ Read + Write   | ♻️ Dynamic, xóa định kỳ  |
+| Permanent App Data | Container đang chạy    | 💾 Volumes + Containers | ✍️ Read + Write   | 🛡️ Dữ liệu không bị mất |
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ `docker login` để xác thực, `docker logout` để đăng xuất
+✅ **Application:** Code và môi trường, fixed, lưu trong images.
 
-✅ `docker pull` tải, `docker push` đẩy image theo định dạng `username/repository:tag`
+✅ **Temporary App Data:** Dynamic, lưu trong containers, mất khi dừng.
 
-✅ Dùng `docker tag` đặt tên image trước khi push
+✅ **Permanent App Data:** Quan trọng, lưu trong containers & volumes.
 
-✅ Luôn `docker pull` trước khi run container để đảm bảo dùng phiên bản mới nhất
+✅ **Dùng volume (`-v`) để lưu dữ liệu vĩnh viễn.**
 
-✅ Docker Hub hỗ trợ chia sẻ image public hoặc private
+✅ **Image không thay đổi sau build, cần quản lý dữ liệu riêng biệt.**
 
-🚀 Quản lý image trên Docker Hub để chia sẻ và triển khai dễ dàng!
+🚀 *Hiểu rõ dữ liệu để quản lý container hiệu quả!*
