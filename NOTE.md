@@ -1,166 +1,137 @@
-# 📝 Naming & Tagging Containers and Images
+# 📝 Working with Docker Hub: Pushing, Pulling, and Sharing Images
 
-## 📌 Naming & Tagging Là Gì?
+## 📌 Tổng Quan
 
-Trong Docker, **naming** và **tagging** giúc định danh và quản lý image và container một cách rõ ràng:
+Docker Hub là kho lưu trữ image mặc định cho Docker, cho phép *push* (đẩy), *pull* (tải), và chia sẻ image. Các lệnh như `docker login`, `docker logout`, `docker push`, `docker pull` giúc quản lý image trên Docker Hub.
 
-* **Image**: Được đặt tên (name) và gắn thẻ (tag) để xác định phiên bản hoặc mục đích (ví dụ: `my-app:latest`).
+## 🚀 Các Lệnh Chính
 
-* **Container**: Có thể được đặt tên (name) để dễ nhận diện thay vì dùng ID ngẫu nhiên.
+### 1. `docker login`
 
-Theo tài liệu chính thức của Docker, tên và tag giúc tổ chức và triển khai image/container hiệu quả.
-
-## 🚀 Naming & Tagging Image
-
-### 1. Đặt Tên và Tag Khi Build Image
-
-Dùng `-t` trong lệnh `docker build` để đặt tên và tag:
+🔓 Đăng nhập vào Docker Hub để xác thực trước khi push/pull image từ repository cá nhân.
 
 ```bash
-docker build -t my-app:latest .
+docker login
 ```
 
-**Cấu trúc**: `<name>:<tag>`
+* Nhập username và password khi được yêu cầu.
+* Lưu thông tin đăng nhập tại `~/.docker/config.json` (mặc định).
 
-* `name`: Tên image (ví dụ: `my-app`, thường là chữ thường).
+### 2. `docker logout`
 
-* `tag`: Phiên bản hoặc nhãn (ví dụ: `latest`, `v1.0`, `dev`).
+🔑 Đăng xuất khỏi Docker Hub.
 
-*Nếu không chỉ định tag, mặc định là `latest`.*
+```bash
+docker logout
+```
+
+* Xóa thông tin xác thực khỏi `~/.docker/config.json`.
+
+### 3. `docker pull`
+
+📥 Tải image từ Docker Hub về máy cục bộ.
+
+```bash
+docker pull [REPOSITORY]:[TAG]
+```
 
 **Ví dụ:**
 
 ```bash
-docker build -t my-app:v1.0 .
+docker pull myusername/my-app:latest
 ```
 
-Tạo image với tên `my-app` và tag `v1.0`.
+* Image phải có dạng `username/repository:tag`.
 
-### 2. Gắn Lại Tag (Retag)
+* Nếu không chỉ định tag, mặc định tải `latest`.
 
-Để thêm hoặc thay đổi tag cho image đã có:
+* Xem image cục bộ: `docker images`.
+
+### 4. `docker push`
+
+📤 Đẩy image từ máy cục bộ lên Docker Hub.
 
 ```bash
-docker tag my-app:v1.0 my-app:stable
+docker push [REPOSITORY]:[TAG]
 ```
 
-* Tạo một tag mới (`stable`) cho cùng image.
-
-* *Không sao chép dữ liệu, chỉ tạo tham chiếu mới.*
-
-### 3. Quy Tắc Đặt Tên Image
-
-* Tên image thường gồm: `[repository]/[image]:[tag]` (ví dụ: `docker.io/my-app:v1.0`).
-
-* Nếu không chỉ định repository, mặc định là `docker.io` (Docker Hub).
-
-**Tên hợp lệ:** Chữ thường, số, dấu gạch dưới (\_), dấu gạch ngang (-), dấu chấm (.).
-
-**Tag hợp lệ:** Tối đa 128 ký tự, thường là phiên bản hoặc nhãn mô tả.
-
-## 🔍 Naming Container
-
-### 1. Đặt Tên Khi Chạy Container
-
-Dùng `--name` trong lệnh `docker run` để đặt tên container:
+**Ví dụ:**
 
 ```bash
-docker run --name my-container -p 3000:3000 my-app:latest
+docker push myusername/my-app:latest
 ```
 
-* `my-container`: Tên do bạn chọn, thay vì ID ngẫu nhiên (ví dụ: `abc123`).
+* Image phải có dạng `username/repository:tag`.
 
-* Tên phải **duy nhất**. Nếu trùng, Docker báo lỗi.
-
-### 2. Tự Động Gán Tên
-
-Nếu không dùng `--name`, Docker tự gán tên ngẫu nhiên (kết hợp tính từ và danh từ, ví dụ: `happy_feynman`).
-
-Xem tên container:
+* Nếu sai định dạng, đặt lại tên:
 
 ```bash
-docker ps
+docker tag my-app:latest myusername/my-app:latest
 ```
 
-### 3. Quy Tắc Đặt Tên Container
+* Phải đăng nhập trước (docker login).
 
-* **Tên hợp lệ:** Chữ, số, `_`, `-`, `.`
+## 🔍 Sử Dụng Image Từ Docker Hub
 
-* **Không được trùng** với container đang tồn tại.
+### Tạo Container Từ Image
 
-* Tên giúc dễ quản lý khi dùng lệnh như `docker stop`, `docker rm`.
+```bash
+docker run -p 3000:3000 myusername/my-app:latest
+```
+
+### 📤 Chia Sẻ Image
+
+* **Public**: Ai cũng có thể pull image (VD: `docker pull myusername/my-app`).
+
+* **Private**: Cần đăng nhập và phân quyền truy cập trên Docker Hub.
+
+## ⚠️ Lưu Ý Quan Trọng
+
+❌ Phiên bản không tự cập nhật:
+Push image mới lên Docker Hub nhưng không pull về, lệnh `docker run` sẽ dùng image cũ (cache).
+
+**Giải pháp:**
+
+```bash
+docker pull myusername/my-app:latest
+docker run myusername/my-app:latest
+```
+
+❌ Định dạng tên image: Phải đúng dạng `username/repository:tag`. Nếu sai, dùng `docker tag` để sửa.
 
 ## 🎯 Ví Dụ Thực Tế
 
-**Build Image:**
-
 ```bash
-docker build -t my-node-app:v1.0 .
-```
+docker login
 
-Kết quả: Image `my-node-app:v1.0`.
+docker build -t my-app:latest .
+docker tag my-app:latest myusername/my-app:latest
 
-**Retag Image:**
+docker push myusername/my-app:latest
 
-```bash
-docker tag my-node-app:v1.0 my-node-app:prod
-```
+docker pull myusername/my-app:latest
+docker run -p 3000:3000 myusername/my-app:latest
 
-Kết quả: Image có thêm tag `my-node-app:prod`.
-
-**Chạy Container:**
-
-```bash
-docker run --name app-prod -p 3000:3000 my-node-app:prod
-```
-
-Kết quả: Container tên `app-prod` chạy từ image `my-node-app:prod`.
-
-**Kiểm Tra:**
-
-```bash
 docker images
 ```
 
 **Kết quả ví dụ:**
 
 ```
-REPOSITORY      TAG       IMAGE ID       CREATED        SIZE
-my-node-app     v1.0      a1b2c3d4e5f6   1 hour ago     900MB
-my-node-app     prod      a1b2c3d4e5f6   1 hour ago     900MB
+REPOSITORY            TAG       IMAGE ID       CREATED        SIZE
+myusername/my-app     latest    a1b2c3d4e5f6   1 hour ago     900MB
 ```
-
-```bash
-docker ps
-```
-
-**Kết quả ví dụ:**
-
-```
-CONTAINER ID   NAME        IMAGE              COMMAND
-xyz789         app-prod    my-node-app:prod   "node server.js"
-```
-
-## ⚠️ Lưu Ý Quan Trọng
-
-❌ Không trùng tên container: Container đang tồn tại phải được xóa (`docker rm`) trước khi tái sử dụng tên
-
-❌ Tag không phải phiên bản duy nhất: Nhiều tag có thể trỏ cùng một image ID
-
-✅ Tag rõ ràng: Dùng tag như `v1.0`, `prod`, `dev` thay vì chỉ `latest` để tránh nhầm lẫn
-
-✅ Kiểm tra trước khi dùng: Dùng `docker images` hoặc `docker ps` để xác minh tên/tag
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Image được đặt tên và tag bằng `-t` trong `docker build` hoặc `docker tag`
+✅ `docker login` để xác thực, `docker logout` để đăng xuất
 
-✅ Container được đặt tên bằng `--name` trong `docker run`
+✅ `docker pull` tải, `docker push` đẩy image theo định dạng `username/repository:tag`
 
-✅ Tên image/container: Chữ thường, số, `_`, `-`, `.`
+✅ Dùng `docker tag` đặt tên image trước khi push
 
-✅ Tag giúc phân biệt phiên bản: `v1.0`, `prod`, `dev`
+✅ Luôn `docker pull` trước khi run container để đảm bảo dùng phiên bản mới nhất
 
-✅ Không trùng tên container, dùng tag rõ ràng để quản lý
+✅ Docker Hub hỗ trợ chia sẻ image public hoặc private
 
-🚀 Đặt tên và tag thông minh để quản lý Docker dễ dàng!
+🚀 Quản lý image trên Docker Hub để chia sẻ và triển khai dễ dàng!
