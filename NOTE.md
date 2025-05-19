@@ -1,78 +1,61 @@
-# 📝 Understanding Data Categories / Different Kinds of Data
+# 📝 Introducing Volumes
 
 ## 📌 Tổng Quan
 
-Trong Docker, dữ liệu được chia thành **3 loại chính** dựa trên cách lưu trữ và quản lý:
-
-* 📦 **Application (Code + Environment)**
-
-* 🔄 **Temporary App Data**
-
-* 💾 **Permanent App Data**
-
-> 📚 *Tài liệu chính thức của Docker nhấn mạnh cách dữ liệu này tương tác với image và container.*
-
-## 🚀 Các Loại Dữ Liệu
-
-### 1. 📦 Application (Code + Environment)
-
-* **Nguồn:** Được cung cấp bởi developer (bạn) thông qua Dockerfile.
-* **Thời điểm thêm:** Được nhúng vào image trong giai đoạn build.
-* **Đặc tính:** "Fixed" – không thể thay đổi sau khi image được xây dựng.
-* **Quyền truy cập:** Read-only, lưu trữ trong images.
-
-🔧 **Ví dụ:** Code ứng dụng, thư viện, và cấu hình (như `node` và `npm` trong `FROM node:18`).
-
-```Dockerfile
-FROM node:18
-COPY . /app
-RUN npm install
-```
+**Volumes** là các thư mục trên ổ cứng máy chủ (host machine) được _mount_ (làm sẵn có, ánh xạ) vào container, cho phép lưu trữ dữ liệu vĩnh viễn. Theo tài liệu chính thức của Docker, volumes khác biệt với cách xử lý dữ liệu trong image và cung cấp giải pháp linh hoạt để quản lý dữ liệu.
 
 ---
 
-### 2. 🔄 Temporary App Data
+## 🚀 Khái Niệm Volumes
 
-* **Nguồn:** Được tạo/tải trong container đang chạy (ví dụ: input người dùng).
-* **Thời điểm lưu:** Lưu trong bộ nhớ hoặc file tạm thời.
-* **Đặc tính:** Dynamic và thay đổi, nhưng bị xóa định kỳ hoặc khi container dừng.
-* **Quyền truy cập:** Read + write, lưu trữ trong containers.
-
-🔧 **Ví dụ:** Log tạm thời, cache session.
+- **Nguồn gốc:** Volumes là thư mục trên máy chủ, ví dụ `/some-path`, được gắn vào một đường dẫn trong container, như `/app/user-data`.
+- **Đặc tính:** Dữ liệu trong volume tồn tại ngay cả khi container dừng hoặc khởi động lại, đảm bảo tính liên tục.
+- **Mục đích:** Container có thể ghi dữ liệu vào volume và đọc từ nó, giúp lưu trữ thông tin quan trọng như tài khoản người dùng hoặc cơ sở dữ liệu.
 
 ---
 
-### 3. 💾 Permanent App Data
+## 🔍 So Sánh Với COPY Trong Dockerfile
 
-* **Nguồn:** Được tạo/tải trong container đang chạy (ví dụ: tài khoản người dùng).
-* **Thời điểm lưu:** Lưu trong file hoặc cơ sở dữ liệu, phải tồn tại khi container dừng/khởi động lại.
-* **Đặc tính:** Không được mất khi container dừng/restart.
-* **Quyền truy cập:** Read + write, lưu trữ trong containers & volumes.
+| Đặc Điểm         | Volumes                                   | COPY Trong Dockerfile                |
+|------------------|-------------------------------------------|--------------------------------------|
+| Thời điểm áp dụng| Dữ liệu được gắn khi container chạy.      | Dữ liệu được sao chép khi build image.|
+| Tính linh hoạt   | Dữ liệu thay đổi được, dynamic.           | Dữ liệu cố định, không thay đổi sau build.|
+| Vị trí lưu trữ   | Trên host machine (thông qua volume).     | Trong image, read-only.              |
+| Mục đích         | Lưu dữ liệu vĩnh viễn, như log hoặc DB.   | Nhúng code, thư viện vào image.      |
+| Tính bền vững    | Dữ liệu tồn tại qua nhiều container.      | Mất khi build lại image mới.         |
 
-🔧 **Ví dụ:** Dữ liệu cơ sở dữ liệu, file cấu hình quan trọng.
+> **Ví dụ:**  
+> Với `COPY`, file cấu hình được nhúng vào image trong giai đoạn build và không thay đổi.  
+> Trong khi đó, volume cho phép container ghi dữ liệu mới (như log) vào một thư mục trên host, giữ nguyên khi container dừng.
 
-```bash
-docker run -v mydata:/app/data my-app
-```
+---
 
-## 🔍 So Sánh Các Loại Dữ Liệu
+## 🎯 Ưu Điểm Của Volumes
 
-| 💡 Loại Dữ Liệu    | 🔗 Nguồn               | 📂 Lưu Trữ              | 🔐 Quyền Truy Cập | ⚙️ Đặc Tính              |
-| ------------------ | ---------------------- | ----------------------- | ----------------- | ------------------------ |
-| Application        | Developer (Dockerfile) | 📦 Images               | 🔒 Read-only      | 🧱 Fixed, không thay đổi |
-| Temporary App Data | Container đang chạy    | 🗂️ Containers (bộ nhớ) | ✍️ Read + Write   | ♻️ Dynamic, xóa định kỳ  |
-| Permanent App Data | Container đang chạy    | 💾 Volumes + Containers | ✍️ Read + Write   | 🛡️ Dữ liệu không bị mất |
+- **Bền vững:** Dữ liệu không mất khi container dừng hoặc khởi động lại.
+- **Tách biệt:** Tách dữ liệu khỏi image, giúp quản lý dễ dàng hơn.
+- **Chia sẻ:** Có thể dùng chung giữa nhiều container.
+
+---
+
+## ⚠️ Lưu Ý Quan Trọng
+
+❌ **Không thay thế image:** Volumes không lưu code ứng dụng mà chỉ quản lý dữ liệu.
+
+✅ **Phù hợp cho dữ liệu quan trọng:** Sử dụng volumes thay vì lưu dữ liệu trong container tạm thời.
+
+---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ **Application:** Code và môi trường, fixed, lưu trong images.
+✅ Volumes là thư mục trên host được mount vào container.
 
-✅ **Temporary App Data:** Dynamic, lưu trong containers, mất khi dừng.
+✅ Dữ liệu trong volumes tồn tại qua các lần dừng/khởi động container.
 
-✅ **Permanent App Data:** Quan trọng, lưu trong containers & volumes.
+✅ Khác COPY: Volumes dynamic, COPY fixed trong image.
 
-✅ **Dùng volume (`-v`) để lưu dữ liệu vĩnh viễn.**
+✅ Dùng volumes để lưu dữ liệu vĩnh viễn như DB hoặc file quan trọng.
 
-✅ **Image không thay đổi sau build, cần quản lý dữ liệu riêng biệt.**
+---
 
-🚀 *Hiểu rõ dữ liệu để quản lý container hiệu quả!*
+## 🚀 Khám phá volumes để quản lý dữ liệu hiệu quả trong Docker!
