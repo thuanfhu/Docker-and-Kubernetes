@@ -1,5 +1,5 @@
 const fs = require('fs').promises;
-const exists = require('fs').exists;
+const fsSync = require('fs');
 const path = require('path');
 
 const express = require('express');
@@ -32,11 +32,13 @@ app.post('/create', async (req, res) => {
   const finalFilePath = path.join(__dirname, 'feedback', adjTitle + '.txt');
 
   await fs.writeFile(tempFilePath, content);
-  exists(finalFilePath, async (exists) => {
-    if (exists) {
+
+  fsSync.access(finalFilePath, fsSync.constants.F_OK, async (err) => {
+    if (!err) {
       res.redirect('/exists');
     } else {
-      await fs.rename(tempFilePath, finalFilePath);
+      await fs.copyFile(tempFilePath, finalFilePath);
+      await fs.unlink(tempFilePath);
       res.redirect('/');
     }
   });
