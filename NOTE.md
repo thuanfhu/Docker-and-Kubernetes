@@ -20,9 +20,9 @@ DRIVER    VOLUME NAME
 local     1a2b3c4d5e6f...
 ```
 
-- Nếu stop container, volume vẫn tồn tại nhưng không hiển thị trong `docker volume ls` vì không còn container nào tham chiếu đến nó (trừ khi dùng `--all` hoặc container vẫn tồn tại trong `docker ps -a`).
+- Nếu stop container (không có `--rm` lúc tạo container), kiểm tra `docker volume ls` vẫn hiển thị.
 
-- Start lại container: Volume vẫn có, dữ liệu không mất, vì Anonymous Volume chỉ bị xóa khi container bị xóa hoàn toàn (`docker rm`) và không có tham chiếu.
+- Nếu start lại container: Volume vẫn có, dữ liệu không mất, vì Anonymous Volume chỉ bị xóa khi container bị xóa hoàn toàn (`docker rm`) và không có tham chiếu.
 
 ---
 
