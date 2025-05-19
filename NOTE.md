@@ -20,9 +20,9 @@ DRIVER    VOLUME NAME
 local     1a2b3c4d5e6f...
 ```
 
-- Nếu stop container (không có `--rm` lúc tạo container), kiểm tra `docker volume ls` vẫn hiển thị.
+- Nếu container được xóa (bao gồm cả khi dùng `--rm`) hoặc image bị xóa, Anonymous Volume vẫn tồn tại trong docker volume ls cho đến khi được dọn dẹp thủ công bằng docker volume prune, vì Docker giữ lại volume không tham chiếu theo chính sách quản lý không gian lưu trữ.
 
-- Nếu start lại container: Volume vẫn có, dữ liệu không mất, vì Anonymous Volume chỉ bị xóa khi container bị xóa hoàn toàn (`docker rm`) và không có tham chiếu.
+- Nếu sử dụng `--rm` khi tạo container, volume liên kết sẽ bị xóa cùng container khi container dừng, vì tùy chọn này tự động xóa cả container và các volume gắn tạm thời không được quản lý bằng tên cụ thể.
 
 ---
 
