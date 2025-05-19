@@ -1,83 +1,134 @@
-# 📝 Copying Files Into & From A Container
+# 📝 Naming & Tagging Containers and Images
 
-## 📌 Lệnh `docker cp` Là Gì?
+## 📌 Naming & Tagging Là Gì?
 
-Lệnh `docker cp` dùng để sao chép file hoặc thư mục giữa máy chủ (host) và container hoặc ngược lại, ngay cả khi container đang chạy hoặc đã dừng.
+Trong Docker, **naming** và **tagging** giúc định danh và quản lý image và container một cách rõ ràng:
 
-**Cú pháp**
+* **Image**: Được đặt tên (name) và gắn thẻ (tag) để xác định phiên bản hoặc mục đích (ví dụ: `my-app:latest`).
 
-```bash
-docker cp [SOURCE_PATH] [DESTINATION_PATH]
-```
+* **Container**: Có thể được đặt tên (name) để dễ nhận diện thay vì dùng ID ngẫu nhiên.
 
-* `SOURCE_PATH`: Đường dẫn file/thư mục nguồn (trên host hoặc container).
+Theo tài liệu chính thức của Docker, tên và tag giúc tổ chức và triển khai image/container hiệu quả.
 
-* `DESTINATION_PATH`: Đường dẫn đích (trên container hoặc host).
+## 🚀 Naming & Tagging Image
 
-* Định dạng: `<container-ID>:<path-in-container>` hoặc `<path-on-host>`.
+### 1. Đặt Tên và Tag Khi Build Image
 
-## 🚀 Tại Sao Cần `docker cp`?
-
-✅ Sao chép file vào container: Thêm config, script, hoặc dữ liệu
-
-✅ Trích xuất file từ container: Lấy log, file cấu hình, hoặc kết quả xử lý
-
-✅ Debug hoặc backup: Kiểm tra nội dung hoặc lưu trữ dữ liệu từ container
-
-## 🔍 Cách Sử Dụng `docker cp`
-
-### 1. Sao Chép Từ Host Vào Container
-
-Sao chép file `config.json` từ host vào thư mục `/app` trong container:
+Dùng `-t` trong lệnh `docker build` để đặt tên và tag:
 
 ```bash
-docker cp config.json <container-ID>:/app/config.json
+docker build -t my-app:latest .
 ```
 
-* `<container-ID>`: ID của container (xem bằng `docker ps` hoặc `docker ps -a`).
-* File sẽ xuất hiện tại `/app/config.json` trong container.
+**Cấu trúc**: `<name>:<tag>`
 
-### 2. Sao Chép Từ Container Ra Host
+* `name`: Tên image (ví dụ: `my-app`, thường là chữ thường).
 
-Sao chép file `logs.txt` từ thư mục `/app` trong container ra host:
+* `tag`: Phiên bản hoặc nhãn (ví dụ: `latest`, `v1.0`, `dev`).
+
+*Nếu không chỉ định tag, mặc định là `latest`.*
+
+**Ví dụ:**
 
 ```bash
-docker cp <container-ID>:/app/logs.txt ./logs.txt
+docker build -t my-app:v1.0 .
 ```
 
-* File `logs.txt` sẽ được lưu vào thư mục hiện tại trên host.
+Tạo image với tên `my-app` và tag `v1.0`.
 
-### 3. Sao Chép Thư Mục
+### 2. Gắn Lại Tag (Retag)
 
-Sao chép toàn bộ thư mục `data` từ host vào container:
+Để thêm hoặc thay đổi tag cho image đã có:
 
 ```bash
-docker cp ./data <container-ID>:/app/data
+docker tag my-app:v1.0 my-app:stable
 ```
 
-Hoặc từ container ra host:
+* Tạo một tag mới (`stable`) cho cùng image.
+
+* *Không sao chép dữ liệu, chỉ tạo tham chiếu mới.*
+
+### 3. Quy Tắc Đặt Tên Image
+
+* Tên image thường gồm: `[repository]/[image]:[tag]` (ví dụ: `docker.io/my-app:v1.0`).
+
+* Nếu không chỉ định repository, mặc định là `docker.io` (Docker Hub).
+
+**Tên hợp lệ:** Chữ thường, số, dấu gạch dưới (\_), dấu gạch ngang (-), dấu chấm (.).
+
+**Tag hợp lệ:** Tối đa 128 ký tự, thường là phiên bản hoặc nhãn mô tả.
+
+## 🔍 Naming Container
+
+### 1. Đặt Tên Khi Chạy Container
+
+Dùng `--name` trong lệnh `docker run` để đặt tên container:
 
 ```bash
-docker cp <container-ID>:/app/data ./data
+docker run --name my-container -p 3000:3000 my-app:latest
 ```
+
+* `my-container`: Tên do bạn chọn, thay vì ID ngẫu nhiên (ví dụ: `abc123`).
+
+* Tên phải **duy nhất**. Nếu trùng, Docker báo lỗi.
+
+### 2. Tự Động Gán Tên
+
+Nếu không dùng `--name`, Docker tự gán tên ngẫu nhiên (kết hợp tính từ và danh từ, ví dụ: `happy_feynman`).
+
+Xem tên container:
+
+```bash
+docker ps
+```
+
+### 3. Quy Tắc Đặt Tên Container
+
+* **Tên hợp lệ:** Chữ, số, `_`, `-`, `.`
+
+* **Không được trùng** với container đang tồn tại.
+
+* Tên giúc dễ quản lý khi dùng lệnh như `docker stop`, `docker rm`.
 
 ## 🎯 Ví Dụ Thực Tế
 
-Giả sử bạn có container `my-node-app` (ID: `abc123`) chạy ứng dụng Node.js.
-
-**Thêm file cấu hình:**
+**Build Image:**
 
 ```bash
-docker cp server-config.js abc123:/app/server-config.js
+docker build -t my-node-app:v1.0 .
 ```
 
-**Lấy file log:**
+Kết quả: Image `my-node-app:v1.0`.
+
+**Retag Image:**
 
 ```bash
-docker cp abc123:/app/app.log ./app.log
+docker tag my-node-app:v1.0 my-node-app:prod
 ```
 
-**Kiểm tra container:**
+Kết quả: Image có thêm tag `my-node-app:prod`.
+
+**Chạy Container:**
+
+```bash
+docker run --name app-prod -p 3000:3000 my-node-app:prod
+```
+
+Kết quả: Container tên `app-prod` chạy từ image `my-node-app:prod`.
+
+**Kiểm Tra:**
+
+```bash
+docker images
+```
+
+**Kết quả ví dụ:**
+
+```
+REPOSITORY      TAG       IMAGE ID       CREATED        SIZE
+my-node-app     v1.0      a1b2c3d4e5f6   1 hour ago     900MB
+my-node-app     prod      a1b2c3d4e5f6   1 hour ago     900MB
+```
 
 ```bash
 docker ps
@@ -86,30 +137,30 @@ docker ps
 **Kết quả ví dụ:**
 
 ```
-CONTAINER ID   IMAGE         COMMAND                  CREATED
-abc123         my-node-app   "node server.js"         1 hour ago
+CONTAINER ID   NAME        IMAGE              COMMAND
+xyz789         app-prod    my-node-app:prod   "node server.js"
 ```
 
 ## ⚠️ Lưu Ý Quan Trọng
 
-❌ Container phải tồn tại: Container không cần chạy (`docker ps -a`), nhưng phải được tạo
+❌ Không trùng tên container: Container đang tồn tại phải được xóa (`docker rm`) trước khi tái sử dụng tên
 
-❌ Đường dẫn chính xác: Đảm bảo đường dẫn trong container tồn tại, nếu không sẽ gặp lỗi
+❌ Tag không phải phiên bản duy nhất: Nhiều tag có thể trỏ cùng một image ID
 
-✅ Quyền truy cập: Kiểm tra quyền của user trong container để tránh lỗi permission
+✅ Tag rõ ràng: Dùng tag như `v1.0`, `prod`, `dev` thay vì chỉ `latest` để tránh nhầm lẫn
 
-✅ Khác với `COPY` trong Dockerfile: `docker cp` hoạt động trên container, còn `COPY` dùng khi build image
+✅ Kiểm tra trước khi dùng: Dùng `docker images` hoặc `docker ps` để xác minh tên/tag
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ `docker cp` sao chép file/thư mục giữa host và container
+✅ Image được đặt tên và tag bằng `-t` trong `docker build` hoặc `docker tag`
 
-✅ Cú pháp: `docker cp [SOURCE] [DESTINATION]`
+✅ Container được đặt tên bằng `--name` trong `docker run`
 
-✅ Hỗ trợ cả container đang chạy và đã dừng
+✅ Tên image/container: Chữ thường, số, `_`, `-`, `.`
 
-✅ Dùng để thêm file, lấy log, hoặc debug
+✅ Tag giúc phân biệt phiên bản: `v1.0`, `prod`, `dev`
 
-✅ Đảm bảo container tồn tại và đường dẫn hợp lệ
+✅ Không trùng tên container, dùng tag rõ ràng để quản lý
 
-🚀 Sao chép file dễ dàng để quản lý container hiệu quả!
+🚀 Đặt tên và tag thông minh để quản lý Docker dễ dàng!
