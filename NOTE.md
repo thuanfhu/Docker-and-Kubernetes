@@ -1,88 +1,115 @@
-# 📝 A Look Behind the Scenes: Inspecting Images
+# 📝 Copying Files Into & From A Container
 
-## 📌 `docker image inspect` Là Gì?
+## 📌 Lệnh `docker cp` Là Gì?
 
-Lệnh `docker image inspect` hiển thị thông tin chi tiết của Docker image dưới dạng **JSON**, bao gồm cấu hình, layer, và metadata.
+Lệnh `docker cp` dùng để sao chép file hoặc thư mục giữa máy chủ (host) và container hoặc ngược lại, ngay cả khi container đang chạy hoặc đã dừng.
 
-### 🔧 Cú pháp
+**Cú pháp**
 
-```sh
-docker image inspect <image-ID>
+```bash
+docker cp [SOURCE_PATH] [DESTINATION_PATH]
 ```
 
-* `<image-ID>`: ID image (ví dụ: `sha256:57b2f3a2d340...`) hoặc tên image.
-* Xem danh sách image:
+* `SOURCE_PATH`: Đường dẫn file/thư mục nguồn (trên host hoặc container).
 
-```sh
-docker images
+* `DESTINATION_PATH`: Đường dẫn đích (trên container hoặc host).
+
+* Định dạng: `<container-ID>:<path-in-container>` hoặc `<path-on-host>`.
+
+## 🚀 Tại Sao Cần `docker cp`?
+
+✅ Sao chép file vào container: Thêm config, script, hoặc dữ liệu
+
+✅ Trích xuất file từ container: Lấy log, file cấu hình, hoặc kết quả xử lý
+
+✅ Debug hoặc backup: Kiểm tra nội dung hoặc lưu trữ dữ liệu từ container
+
+## 🔍 Cách Sử Dụng `docker cp`
+
+### 1. Sao Chép Từ Host Vào Container
+
+Sao chép file `config.json` từ host vào thư mục `/app` trong container:
+
+```bash
+docker cp config.json <container-ID>:/app/config.json
 ```
 
----
+* `<container-ID>`: ID của container (xem bằng `docker ps` hoặc `docker ps -a`).
+* File sẽ xuất hiện tại `/app/config.json` trong container.
 
-## 🚀 Tại Sao Cần Inspect?
+### 2. Sao Chép Từ Container Ra Host
 
-✅ **Debug**: Kiểm tra `Cmd`, `Env`, `WorkingDir`.
+Sao chép file `logs.txt` từ thư mục `/app` trong container ra host:
 
-✅ **Xác minh**: Xem layer, kích thước, cấu hình.
-
-✅ **Deploy**: Đảm bảo image đúng yêu cầu.
-
----
-
-## 🔍 Sử Dụng `docker image inspect`
-
-### 📘 Ví dụ
-
-Inspect image với ID `sha256:57b2f3a2d340...`:
-
-```sh
-docker image inspect sha256:57b2f3a2d3402eaf1bd2fd4323c0f7630f8ea9456ba0081fc13465955c9713cd
+```bash
+docker cp <container-ID>:/app/logs.txt ./logs.txt
 ```
 
-### 📄 Kết Quả (Rút Gọn)
+* File `logs.txt` sẽ được lưu vào thư mục hiện tại trên host.
 
-```json
-{
-  "Id": "sha256:57b2f3a2d340...",
-  "Created": "2025-05-19T02:13:40Z",
-  "Size": 381801417,
-  "Config": {
-    "Env": ["PATH=/usr/local/bin:...", "PYTHON_VERSION=3.13.3"],
-    "Cmd": ["python", "guess_number.py"],
-    "WorkingDir": "/app"
-  },
-  "RootFS": {
-    "Layers": ["sha256:247f...", ...]
-  }
-}
+### 3. Sao Chép Thư Mục
+
+Sao chép toàn bộ thư mục `data` từ host vào container:
+
+```bash
+docker cp ./data <container-ID>:/app/data
 ```
 
----
+Hoặc từ container ra host:
 
-## 🧠 Giải Thích
+```bash
+docker cp <container-ID>:/app/data ./data
+```
 
-| Trường              | Ý Nghĩa                                    |
-| ------------------- | ------------------------------------------ |
-| `Id`                | ID duy nhất của image.                     |
-| `Created`           | Thời gian tạo image.                       |
-| `Size`              | Kích thước image (byte).                   |
-| `Config.Cmd`        | Lệnh mặc định: `python guess_number.py`.   |
-| `Config.WorkingDir` | Thư mục làm việc: `/app`.                  |
-| `Config.Env`        | Biến môi trường: Python 3.13.3, PATH, v.v. |
-| `RootFS.Layers`     | Danh sách layer tạo nên image.             |
+## 🎯 Ví Dụ Thực Tế
 
-## ⚠️ Lưu Ý
+Giả sử bạn có container `my-node-app` (ID: `abc123`) chạy ứng dụng Node.js.
 
-❌ Không nhầm với `docker inspect` (kiểm tra container).
+**Thêm file cấu hình:**
 
----
+```bash
+docker cp server-config.js abc123:/app/server-config.js
+```
 
-## 📌 Tóm Tắt
+**Lấy file log:**
 
-✅ `docker image inspect <image-ID>` trả về JSON chi tiết về image.
+```bash
+docker cp abc123:/app/app.log ./app.log
+```
 
-✅ Hữu ích để **debug**, **xác minh cấu hình**, **layer**.
+**Kiểm tra container:**
 
-✅ Trường chính: `Id`, `Config`, `Size`, `RootFS`.
+```bash
+docker ps
+```
 
-🚀 **Inspect để khám phá bí mật bên trong image!**
+**Kết quả ví dụ:**
+
+```
+CONTAINER ID   IMAGE         COMMAND                  CREATED
+abc123         my-node-app   "node server.js"         1 hour ago
+```
+
+## ⚠️ Lưu Ý Quan Trọng
+
+❌ Container phải tồn tại: Container không cần chạy (`docker ps -a`), nhưng phải được tạo
+
+❌ Đường dẫn chính xác: Đảm bảo đường dẫn trong container tồn tại, nếu không sẽ gặp lỗi
+
+✅ Quyền truy cập: Kiểm tra quyền của user trong container để tránh lỗi permission
+
+✅ Khác với `COPY` trong Dockerfile: `docker cp` hoạt động trên container, còn `COPY` dùng khi build image
+
+## 📌 Tóm Tắt Kiến Thức Quan Trọng
+
+✅ `docker cp` sao chép file/thư mục giữa host và container
+
+✅ Cú pháp: `docker cp [SOURCE] [DESTINATION]`
+
+✅ Hỗ trợ cả container đang chạy và đã dừng
+
+✅ Dùng để thêm file, lấy log, hoặc debug
+
+✅ Đảm bảo container tồn tại và đường dẫn hợp lệ
+
+🚀 Sao chép file dễ dàng để quản lý container hiệu quả!
