@@ -1,109 +1,82 @@
-# 📝 Understanding Named Volumes in Docker
+# 📝 Getting Started With Bind Mounts (Code Sharing)
 
 ## 📌 Tổng Quan
 
-Docker hỗ trợ hai loại lưu trữ dữ liệu bên ngoài: **Volumes** (quản lý bởi Docker) và **Bind Mounts** (quản lý bởi bạn). Volumes chia thành **Anonymous Volumes** và **Named Volumes**, giúp lưu trữ dữ liệu vĩnh viễn. Named Volumes được quản lý qua lệnh `docker volume`, còn Anonymous Volumes tự động tạo bởi Docker.
+Bind Mounts cho phép ánh xạ trực tiếp một thư mục hoặc file từ máy chủ (host) vào container, giúp chia sẻ code giữa host và container trong quá trình phát triển. Theo tài liệu chính thức của Docker, Bind Mounts được quản lý bởi người dùng, khác với Volumes (quản lý bởi Docker).
 
 ---
 
-## 🚀 Anonymous Volumes Với VOLUME Trong Dockerfile
+## 🚀 Sử Dụng Bind Mounts Để Chia Sẻ Code
 
-**Tình Huống**: Dockerfile có lệnh `VOLUME ["/app/feedback"]`
+Bind Mounts thường dùng để đồng bộ code giữa host và container, giúp chỉnh sửa code trên host mà không cần build lại image.
 
-- Quy trình: Image → Container → Khi chạy container, Docker tự động tạo Anonymous Volume cho `/app/feedback`.
+**Cú pháp:**
 
-**Kiểm tra:**: `docker volume ls`
-
-**Kết quả ví dụ:**
 ```
-DRIVER    VOLUME NAME
-local     1a2b3c4d5e6f...
+docker run -v /path/on/host:/path/in/container image_name
 ```
 
-- Chúng ta thấy rằng các volume ẩn danh (anonymous volumes) sẽ tự động bị xóa khi container bị xóa, và điều này xảy ra khi bạn khởi động/chạy container với tùy chọn `--rm`.
+- `/path/on/host`: Đường dẫn tuyệt đối trên host.
 
-- Nếu bạn khởi động container mà không dùng tùy chọn đó, volume ẩn danh sẽ không bị xóa ngay cả khi bạn xóa container (bằng `docker rm`...); tuy nhiên, nếu bạn tạo lại và chạy lại container (tức là chạy `docker run` ... lần nữa), một volume ẩn danh mới sẽ được tạo
+- `/path/in/container`: Đường dẫn trong container.
 
-- Do đó, dù volume cũ không bị xóa tự động, nó cũng không hữu ích vì volume ẩn danh khác sẽ được gắn khi container khởi động lại (tức là bạn đã xóa container cũ và chạy container mới); lúc này, bạn sẽ tích lũy nhiều volume ẩn danh không dùng đến, và có thể dọn chúng bằng `docker volume rm VOL_NAME` hoặc `docker volume prune`.
+**Ví Dụ:** Chia sẻ thư mục `/home/user/project` trên host vào `/app` trong container:
 
----
-
-### Anonymous Volume Lưu Ở Đâu?
-
-Theo tài liệu Docker, Anonymous Volumes lưu trên ổ cứng máy chủ tại thư mục do Docker quản lý:
-
-- **Linux:** `/var/lib/docker/volumes/<volume-id>/_data`
-
-- **Windows/Mac:** Tùy vào cấu hình Docker Desktop.
-
-**Có nên tìm và truy cập không?**
-
-- Không khuyến khích: Đường dẫn phức tạp, không có tên cụ thể, và không dễ quản lý.
-
-- Quyền truy cập: Có, nếu bạn có quyền root trên host, nhưng không nên chỉnh sửa trực tiếp vì dễ gây lỗi.
-
----
-
-## 🔍 Named Volumes Với -v
-
-**Tạo Named Volume**: Dùng `-v` để tạo Named Volume khi chạy container: `docker run -v my-volume:/app/feedback my-app`
-
-- Kết quả: Tạo volume tên `my-volume`, ánh xạ vào `/app/feedback` trong container.
-
-**Kiểm tra:** `docker volume ls`
-
-**Kết quả ví dụ:**
 ```
-DRIVER    VOLUME NAME
-local     my-volume
+docker run -v /home/user/project:/app my-app
 ```
 
-- Ưu điểm: Dễ quản lý, có tên cụ thể, tồn tại độc lập với container.
+Mọi thay đổi trong `/home/user/project` trên host sẽ được phản ánh ngay lập tức trong `/app` của container, và ngược lại. Container có thể chạy ứng dụng trực tiếp từ code được ánh xạ.
 
 ---
 
-### So Sánh Anonymous và Named Volumes
+## 📝 Ghi Chú Về Shortcut
 
-| Đặc Điểm    | Anonymous Volumes                        | Named Volumes                        |
-|-------------|------------------------------------------|--------------------------------------|
-| Cách tạo    | Tự động qua VOLUME trong Dockerfile.     | Chỉ định bằng -v <name>:/path.       |
-| Tên         | ID ngẫu nhiên (ví dụ: 1a2b3c4d5e6f).     | Tên do bạn đặt (ví dụ: my-volume).   |
-| Quản lý     | Khó tìm, khó truy cập.                   | Dễ quản lý qua docker volume.        |
-| Tính bền vững| Tồn tại cho đến khi container bị xóa.   | Tồn tại độc lập, xóa bằng docker volume rm. |
-| Dùng khi    | Dữ liệu tạm thời, không cần quản lý chi tiết. | Dữ liệu quan trọng, cần quản lý lâu dài. |
+Ghi chú nhanh: Nếu bạn không muốn luôn phải nhập đường dẫn đầy đủ, có thể dùng các shortcut sau:  
+
+- macOS/Linux: `-v $(pwd):/app`  
+
+- Windows: `-v "%cd%":/app`
 
 ---
 
-## 🗂️ Giới Thiệu Ngắn Về Bind Mounts
+## 🔍 So Sánh Bind Mounts Với Volumes
 
-**Bind Mounts:** Ánh xạ trực tiếp một thư mục cụ thể trên host (ví dụ: `/some-path`) vào container (ví dụ: `/app/data`).  
-
-**Đặc điểm:** Bạn quản lý đường dẫn, phù hợp khi cần chỉnh sửa dữ liệu trực tiếp trên host.  
-
-**Khác với Volumes:** Không do Docker quản lý, bạn chịu trách nhiệm về đường dẫn và quyền truy cập.
+| Đặc Điểm      | Bind Mounts                              | Volumes                                 |
+|---------------|------------------------------------------|-----------------------------------------|
+| Quản lý       | Người dùng quản lý đường dẫn trên host.   | Docker quản lý (Named/Anonymous).       |
+| Đường dẫn     | Ánh xạ đường dẫn cụ thể từ host.         | Lưu trữ trong /var/lib/docker/volumes.  |
+| Dùng khi      | Phát triển, cần chỉnh sửa code trực tiếp. | Lưu trữ dữ liệu vĩnh viễn (như DB).     |
+| Tính linh hoạt| Dễ truy cập trên host, nhưng phụ thuộc host. | Độc lập với host, dễ di chuyển.      |
 
 ---
 
-## ⚠️ Lưu Ý Quan Trọng
+## 🎯 Ví Dụ Thực Tế
 
-❌ Anonymous Volumes khó quản lý: Không có tên cụ thể, không nên dùng cho dữ liệu quan trọng.
+Bạn có thư mục code `/home/user/my-node-app` trên host.
 
-✅ Named Volumes phù hợp hơn: Dễ theo dõi, quản lý bằng lệnh docker volume.
+Chạy container với Bind Mount:
 
-✅ Dữ liệu an toàn: Cả hai loại volume đều tồn tại sau khi container dừng, trừ khi xóa thủ công.
+```
+docker run -v /home/user/my-node-app:/app -p 3000:3000 node:18
+```
+
+Chỉnh sửa file trong `/home/user/my-node-app` trên host, container sẽ tự động nhận thay đổi mà không cần restart.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Anonymous Volumes: Tự động tạo qua VOLUME, lưu tại /var/lib/docker/volumes, khó quản lý.
+✅ Bind Mounts ánh xạ thư mục host vào container, giúp chia sẻ code dễ dàng.
 
-✅ Named Volumes: Tạo bằng -v, có tên cụ thể, dễ quản lý.
+✅ Cú pháp: -v /path/on/host:/path/in/container.
 
-✅ Bind Mounts: Ánh xạ thư mục host, bạn tự quản lý.
+✅ Shortcut: $(pwd) (macOS/Linux) hoặc "%cd%" (Windows).
 
-✅ Dùng Named Volumes cho dữ liệu quan trọng, tránh chỉnh sửa trực tiếp Anonymous Volumes.
+✅ Khác Volumes: Người dùng quản lý, phù hợp cho phát triển.
+
+✅ Kiểm tra quyền truy cập để tránh lỗi đọc/ghi.
 
 ---
 
-### 🚀 Hiểu rõ volumes để lưu trữ dữ liệu hiệu quả trong Docker!
+### 🚀 Dùng Bind Mounts để phát triển nhanh hơn với Docker!
