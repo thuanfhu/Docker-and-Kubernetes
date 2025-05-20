@@ -65,6 +65,34 @@ Chỉnh sửa file trong `/home/user/my-node-app` trên host, container sẽ t�
 
 ---
 
+## 🛠️ Vấn Đề Ghi Đè Với Bind Mounts
+
+**Tình Huống** 
+
+Khi chạy container với Bind Mount và Named Volume:
+
+```
+docker run -d -p 3000:80 --rm --name my-container-volumes-1 -v feedback:/app/feedback -v "D:\Workspace\...\NodeJS Data Volumes:/app" nodejs-app:volumes
+```
+
+- Vấn đề: Nếu Dockerfile đã cài đặt node_modules trong `/app` (qua COPY và RUN npm install), Bind Mount `-v "D:\Workspace\...\NodeJS Data Volumes:/app"` sẽ ghi đè toàn bộ `/app` trong container bằng nội dung thư mục trên host. Nếu thư mục host không có node_modules, container sẽ thiếu thư viện, dẫn đến lỗi và dừng.
+
+- Hậu quả với `--rm`: Vì container dùng `--rm`, khi dừng, container sẽ tự động bị xóa, bao gồm cả dữ liệu tạm thời (nhưng Named Volume feedback vẫn tồn tại).
+
+- Giải pháp: Tránh ánh xạ toàn bộ `/app`. Thay vào đó, ánh xạ thư mục con cụ thể hoặc đảm bảo thư mục trên host có node_modules.
+
+---
+
+## ⚠️ Lưu Ý Quan Trọng
+
+❌ Phụ thuộc vào host: Nếu thư mục trên host không tồn tại, Docker sẽ tạo thư mục rỗng, có thể gây lỗi.
+
+❌ Ghi đè Bind Mounts: Ánh xạ thư mục chính (như /app) có thể xóa dữ liệu quan trọng như node_modules (như ví dụ trên).
+
+✅ Phù hợp cho phát triển: Bind Mounts lý tưởng để đồng bộ code, nhưng không nên dùng cho dữ liệu production (dùng Volumes thay thế).
+
+---
+
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
 ✅ Bind Mounts ánh xạ thư mục host vào container, giúp chia sẻ code dễ dàng.
@@ -76,6 +104,8 @@ Chỉnh sửa file trong `/home/user/my-node-app` trên host, container sẽ t�
 ✅ Khác Volumes: Người dùng quản lý, phù hợp cho phát triển.
 
 ✅ Kiểm tra quyền truy cập để tránh lỗi đọc/ghi.
+
+✅ Tránh ghi đè /app khi dùng Bind Mounts để không mất dữ liệu như node_modules.
 
 ---
 
