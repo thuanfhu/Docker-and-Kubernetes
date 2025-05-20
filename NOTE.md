@@ -20,9 +20,11 @@ DRIVER    VOLUME NAME
 local     1a2b3c4d5e6f...
 ```
 
-- Theo tài liệu chính thức của Docker, nếu bạn xóa container (không có `--rm` khi tạo container) và xóa image, Anonymous Volume vẫn có thể hiển thị trong `docker volume ls` vì nó chỉ bị xóa khi không còn container nào tham chiếu và được dọn dẹp thủ công bằng `docker volume prune` hoặc khi Docker thực hiện garbage collection.
+- Chúng ta thấy rằng các volume ẩn danh (anonymous volumes) sẽ tự động bị xóa khi container bị xóa, và điều này xảy ra khi bạn khởi động/chạy container với tùy chọn `--rm`.
 
-- Nếu sử dụng `--rm` khi tạo container (ví dụ: `docker run --rm`), volume sẽ bị xóa ngay khi container dừng, vì tùy chọn này tự động loại bỏ container cùng dữ liệu liên quan, bao gồm Anonymous Volume, sau khi container kết thúc.
+- Nếu bạn khởi động container mà không dùng tùy chọn đó, volume ẩn danh sẽ không bị xóa ngay cả khi bạn xóa container (bằng `docker rm`...); tuy nhiên, nếu bạn tạo lại và chạy lại container (tức là chạy `docker run` ... lần nữa), một volume ẩn danh mới sẽ được tạo
+
+- Do đó, dù volume cũ không bị xóa tự động, nó cũng không hữu ích vì volume ẩn danh khác sẽ được gắn khi container khởi động lại (tức là bạn đã xóa container cũ và chạy container mới); lúc này, bạn sẽ tích lũy nhiều volume ẩn danh không dùng đến, và có thể dọn chúng bằng `docker volume rm VOL_NAME` hoặc `docker volume prune`.
 
 ---
 
