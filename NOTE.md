@@ -79,8 +79,6 @@ docker run -d -p 3000:80 --rm --name my-container-volumes-1 -v feedback:/app/fee
 
 - Hậu quả với `--rm`: Vì container dùng `--rm`, khi dừng, container sẽ tự động bị xóa, bao gồm cả dữ liệu tạm thời (nhưng Named Volume feedback vẫn tồn tại).
 
-- Giải pháp: Tránh ánh xạ toàn bộ `/app`. Thay vào đó, ánh xạ thư mục con cụ thể hoặc đảm bảo thư mục trên host có node_modules.
-
 ---
 
 ## ⚠️ Lưu Ý Quan Trọng
