@@ -1,82 +1,83 @@
-# 📝 Introduction to Networking (Cross-)Container Communication
+# 📝 Container-to-Container Communication: A Basic Approach
 
 ## 📌 Tổng Quan
 
-🌐 Docker networking cho phép container giao tiếp với nhau, với host, hoặc với thế giới bên ngoài (WWW).
+🔗 `Container-to-container communication` cho phép các container giao tiếp với nhau, như giữa ứng dụng và dịch vụ (database, cache, API server). Cách tiếp cận cơ bản là dùng `IP của container` để kết nối trực tiếp.
 
 ---
 
-## 🚀 Các Trường Hợp Giao Tiếp
+## 🚀 Cách Thực Hiện
 
-### 1️⃣ Container to WWW
+**1️⃣ Chạy Container Dịch Vụ**
+  
+Tạo container cho một dịch vụ (ví dụ: MongoDB):
 
-- **Mô tả:** Container giao tiếp với internet (ví dụ: tải dữ liệu từ API công cộng).
+```
+docker run -d --name service-container mongo
+```
 
-- **Yêu cầu:** Container cần truy cập mạng bên ngoài, thường qua default bridge network.
-
-- **Cấu hình:** Không cần đặc biệt nếu host có internet.
-
-- **Ví dụ:** Container chạy ứng dụng gọi API:  
-
-  `https://api.example.com`
+Ví dụ: Container mongo chạy MongoDB.
 
 ---
 
-### 2️⃣ Container to Local Host Machine
+**2️⃣ Lấy IP Của Container Dịch Vụ**  
 
-- **Mô tả:** Container giao tiếp với dịch vụ trên host (ví dụ: database, Redis).
+Kiểm tra IP bằng lệnh:
 
-- **Dịch vụ thường gặp:** Database (MySQL, PostgreSQL - cổng 3306, 5432), Cache (Redis - cổng 6379), Message Queue (RabbitMQ - cổng 5672).
+```
+docker container inspect service-container
+```
 
-- **Cách thực hiện:** Dùng `host.docker.internal` (Windows/Mac) hoặc IP host (Linux) để truy cập.
-
-- **Ví dụ:** Container gọi database trên host:  
-
-  `mysql://host.docker.internal:3306`
+Trong phần NetworkSettings, tìm IPAddress, ví dụ: `"IPAddress": "172.17.0.2"`. IP này dùng để container khác kết nối tới.
 
 ---
 
-### 3️⃣ Container to Container
+**3️⃣ Kết Nối Từ Container Ứng Dụng** 
 
-- **Mô tả:** Container giao tiếp với nhau (ví dụ: ứng dụng web gọi database).
+Trong mã ứng dụng, kết nối tới container dịch vụ bằng IP:
 
-- **Cách thực hiện:** Dùng user-defined network để hỗ trợ DNS resolution.
+```js
+// Ví dụ: Kết nối tới MongoDB từ ứng dụng Node.js
+mongoose.connect(
+  'mongodb://172.17.0.2:27017/swfavorites',
+  { 
+    useNewUrlParser: true, 
+    useUnifiedTopology: true 
+  },
+  (err) => {
+    if (err) {
+      console.log(err);
+    } else {
+      app.listen(3000);
+    }
+  }
+);
+```
 
-- **Ví dụ:**  
-
-  - Tạo network: `docker network create my-net`
-
-  - Chạy container:  
-
-    `docker run --network my-net --name web my-web-app`  
-    `docker run --network my-net --name db postgres`
-
-  - Container web gọi db qua tên:  
-
-    `postgres://db:5432`
+Container ứng dụng gọi container dịch vụ (MongoDB) qua IP `172.17.0.2` trên cổng `27017`.
 
 ---
 
-## 🔍 Best Practices: Phân Chia Trách Nhiệm Container
+## ⚠️ Vấn Đề Với Cách Tiếp Cận
 
-- **Nguyên tắc:** Mỗi container chỉ nên đảm nhiệm một trách nhiệm duy nhất (Single Responsibility Principle).
+- ❗ **IP không cố định:** IP của container (như `172.17.0.2`) thay đổi mỗi khi container khởi động lại hoặc trong môi trường network phức tạp, gây lỗi kết nối.
 
-- **Ví dụ phân chia:** Container cho code (Node.js app), database (PostgreSQL, MySQL), cache (Redis), proxy (Nginx).
+- ❗ **Khó quản lý:** Phải kiểm tra IP thủ công mỗi lần, không phù hợp khi mở rộng hoặc tự động hóa.
 
-- **Lợi ích:** Dễ mở rộng, quản lý, bảo trì và tối ưu hiệu suất (mỗi container chỉ xử lý một tác vụ).
+- ❗ **Không hỗ trợ DNS:** Default bridge network không cho phép gọi container bằng tên, phải dùng IP.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Container to WWW: Giao tiếp trực tiếp qua internet.
+✅ Container dịch vụ: Chạy với `docker run --name service-container`.
 
-✅ Container to Host: Gọi dịch vụ host (MySQL, Redis) qua host.docker.internal.
+✅ Lấy IP: Dùng `docker container inspect` để tìm IPAddress.
 
-✅ Container to Container: Dùng user-defined network, giao tiếp qua tên.
+✅ Kết nối: Ứng dụng dùng IP để gọi dịch vụ (ví dụ: MongoDB).
 
-✅ Best Practices: Một container một trách nhiệm (code, DB, cache).
+✅ Vấn đề: IP động, khó quản lý, không hỗ trợ DNS.
 
 ---
 
-### 🚀 Hiểu networking để kết nối container hiệu quả!
+### 🚀 Cách cơ bản để container giao tiếp, nhưng không tối ưu!
