@@ -2,13 +2,13 @@
 
 ## 📌 Tổng Quan
 
-`Read-only volumes` trong Docker là các thư mục được gắn vào container với quyền chỉ đọc (read-only), giúp bảo vệ dữ liệu không bị container thay đổi.
+Read-only volumes trong Docker là cách gắn các thư mục hoặc volume vào container với quyền chỉ đọc (read-only), giúp bảo vệ dữ liệu khỏi bị thay đổi.
 
 ---
 
 ## 🚀 Lệnh Và Cách Hoạt Động
 
-**Lệnh Cụ Thể:**
+**Lệnh hiện tại:**
 
 ```
 docker run -d -p 3000:80 --rm --name my-container -v feedback:/app/feedback -v path-to-host:/app:ro -v /app/node_modules -v /app/temp nodejs-app:volumes
@@ -16,58 +16,70 @@ docker run -d -p 3000:80 --rm --name my-container -v feedback:/app/feedback -v p
 
 **Ý nghĩa:**
 
-- `-v path-to-host:/app:ro`: Ánh xạ thư mục từ host vào `/app` trong container, nhưng chỉ cho phép đọc.
+- `-v path-to-host:/app:ro`: Gắn thư mục từ máy chủ (host) vào `/app` trong container, chỉ cho phép đọc.
 
-- `-v feedback:/app/feedback`: Tạo Named Volume để lưu file feedback, cho phép đọc và ghi.
+- `-v feedback:/app/feedback`: Tạo volume tên feedback để lưu file feedback, cho phép đọc và ghi.
 
-- `-v /app/node_modules` và `-v /app/temp`: Tạo Anonymous Volumes để bảo vệ node_modules và lưu file tạm, cho phép đọc và ghi.
-
----
-
-## ❓ Tại Sao Dùng `:ro`?
-
-- `:ro` (read-only) được thêm vào Bind Mount `/app` để bảo vệ code (như `server.js`, `feedback.html`) trên host. Container chỉ được đọc, không được ghi vào `/app`.
-
-- Ví dụ từ source code: `server.js` cần đọc `feedback.html` từ `/app/pages` để hiển thị form, nhưng không cần ghi vào `/app`. Dùng `:ro` đảm bảo container không vô tình tạo hoặc sửa file trong `/app`.
+- `-v /app/node_modules` và `-v /app/temp`: Tạo volume ẩn danh để bảo vệ thư viện và lưu file tạm, cho phép đọc và ghi.
 
 ---
 
-## 🔍 Quyền Đọc/Ghi Của Các Thư Mục
+## ❓ Tại sao dùng `:ro`?
 
-| 📁 Thư Mục         | Loại Volume        | Quyền      | Mục Đích                                               |
-|--------------------|-------------------|------------|--------------------------------------------------------|
-| `/app`             | Bind Mount (`:ro`) | Chỉ đọc    | Chứa code (như `server.js`), container chỉ đọc từ host |
-| `/app/feedback`    | Named Volume      | Đọc + ghi  | Lưu file feedback (ví dụ: `title.txt`), container ghi được |
-| `/app/temp`        | Anonymous Volume  | Đọc + ghi  | Lưu file tạm (ví dụ: `temp-title.txt`), container ghi được |
-| `/app/node_modules`| Anonymous Volume  | Đọc + ghi  | Bảo vệ thư viện từ image, container không ghi (theo code) |
+`:ro` bảo vệ code (như `server.js`, `feedback.html`) từ `path-to-host`, đảm bảo container chỉ đọc, không ghi. 
 
-Container mặc định: Có thể đọc và ghi vào mọi thư mục trong layer của nó, trừ khi bị giới hạn bởi `:ro` hoặc quyền hệ thống.
-
-Ví dụ: Nếu bạn gửi feedback qua `feedback.html`, `server.js` sẽ ghi file vào `/app/feedback` (Named Volume) và `/app/temp` (Anonymous Volume), nhưng không thể ghi vào `/app` vì `/app` là read-only.
+Trong `server.js`, container đọc `feedback.html` để hiển thị form, nhưng không sửa file, nên `:ro` rất phù hợp.
 
 ---
 
-## 🔄 Đồng Bộ Giữa Host Và Container
+## 🔍 Quyền Truy Cập và Đồng Bộ Dữ Liệu
 
-### 🔸 Thay Đổi Từ Host
+### 📂 Quyền Đọc/Ghi Của Từng Thư Mục
 
-- Sửa file trên host: Nếu bạn sửa `server.js` trong `path-to-host`, thay đổi sẽ tự động cập nhật trong `/app` của container mà không cần build lại image.
+| Thư mục              | Loại Volume         | Quyền truy cập      | Ghi chú                                                                 |
+|----------------------|--------------------|---------------------|-------------------------------------------------------------------------|
+| `/app`               | Bind Mount (`:ro`) | Chỉ đọc             | Chứa code từ host, không thể ghi. Nếu ghi sẽ báo lỗi "read-only file system". |
+| `/app/feedback`      | Named Volume       | Đọc và ghi          | Lưu file feedback (vd: `title.txt`), không liên quan đến host.          |
+| `/app/temp`          | Anonymous Volume   | Đọc và ghi          | Lưu file tạm (vd: `temp-title.txt`), không liên quan đến host.          |
+| `/app/node_modules`  | Anonymous Volume   | Đọc và ghi*         | Chứa thư viện từ image, bảo vệ khỏi Bind Mount ghi đè. Code hiện tại không ghi vào đây. |
 
-- Ví dụ: Thêm `console.log("Hello")` vào `server.js` trên host, container sẽ chạy code mới ngay lập tức.
+> 📝 **Lưu ý:** Container mặc định có thể đọc và ghi vào mọi thư mục trong layer của nó, trừ khi bị giới hạn bởi `:ro` hoặc quyền hệ thống.
 
-### 🔸 Thay Đổi Từ Container
+---
 
-- Ghi vào `/app`: Không được, vì `/app` là read-only (`:ro`). Container sẽ báo lỗi nếu thử.
+## 🔄 Dữ Liệu Di Chuyển Như Thế Nào?
 
-- Ghi vào `/app/feedback` hoặc `/app/temp`: Được, dữ liệu lưu vào volume (Named hoặc Anonymous), không ảnh hưởng đến host.
+### 🖥️ Từ máy chủ (host) đến container
 
-- Ví dụ: Gửi feedback qua form, `server.js` tạo file `title.txt` trong `/app/feedback`. File này lưu trong volume feedback, không đồng bộ với host.
+- Sửa file trong `path-to-host` (như thêm `console.log("Hello")` vào `server.js`) sẽ tự động cập nhật trong `/app` của container nhờ Bind Mount.
 
-### 🔸 Đồng Bộ Là Gì?
+- Ví dụ: Sửa `feedback.html` trên host, truy cập http://localhost:3000, bạn sẽ thấy giao diện mới ngay lập tức, không cần build lại image.
 
-- **Host → Container:** Bind Mount (`/app`) cho phép container đọc code từ host, nên sửa host sẽ tự động cập nhật trong container.
+### 📦 Từ container đến máy chủ (host)
 
-- **Container → Host:** Không, vì `/app` là read-only. Dữ liệu ghi vào volume (như `/app/feedback`) chỉ lưu trong volume, không ảnh hưởng host.
+- Container không thể ghi ngược lên `path-to-host`, vì `/app` là read-only (`:ro`).
+
+- Ví dụ: Nếu `server.js` cố tạo file mới trong `/app`, sẽ báo lỗi.
+
+### 🔁 Thay đổi trong container và ảnh hưởng đến volume/host
+
+- **/app/feedback:** Khi gửi feedback, `server.js` tạo file `title.txt` trong `/app/feedback`. File này lưu trong volume feedback, host không thấy, nhưng volume cập nhật và giữ file ngay cả khi container dừng.
+
+- **/app/temp:** `server.js` tạo file tạm `temp-title.txt`, sau đó xóa. File này lưu trong volume ẩn danh, host không thấy, nhưng volume cập nhật cho đến khi container bị xóa.
+
+- **/app/node_modules:** Code hiện tại không ghi vào đây. Nếu có thay đổi (như cài thư viện mới), volume ẩn danh sẽ lưu, host không thấy.
+
+> 💡 **Tóm lại:** Thay đổi trong container chỉ lưu vào volume, không ảnh hưởng host.
+
+---
+
+## 📝 Tóm Lại Quyền và Đồng Bộ
+
+- **Quyền:** `/app` chỉ đọc, `/app/feedback` và `/app/temp` đọc + ghi.
+
+- **Đồng bộ:** Sửa host → container (qua Bind Mount), container → volume (không host).
+
+- **Ví dụ:** Sửa code trên host, container cập nhật ngay. Gửi feedback, file lưu trong volume, host không thấy.
 
 ---
 
