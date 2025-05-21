@@ -1,121 +1,101 @@
-# 📝 Working with Environment Variables & ".env" Files
+# 📝 Using Build Arguments (ARG)
 
 ## 📌 Tổng Quan
 
-Biến môi trường (`environment variables`) trong Docker cho phép cấu hình ứng dụng linh hoạt mà không cần hardcode giá trị.  
-
-Theo tài liệu chính thức của Docker, biến môi trường có thể được thiết lập qua Dockerfile, lệnh `docker run`, hoặc file `.env`, giúp quản lý cấu hình dễ dàng.
+ARG trong Docker cho phép truyền tham số khi build image, giúp tùy chỉnh image mà không cần sửa Dockerfile. Theo tài liệu chính thức của Docker, ARG chỉ tồn tại trong quá trình build, không ảnh hưởng runtime.
 
 ---
 
-## 🚀 Lợi Ích Của Biến Môi Trường
+## 🚀 Dockerfile Hiện Tại
 
-- 🔄 Linh hoạt: Thay đổi giá trị mà không cần sửa code (ví dụ: port, API key).
-
-- 🔒 Bảo mật: Tránh hardcode thông tin nhạy cảm trong code.
-
-- ♻️ Tái sử dụng: Dùng cùng image trong các môi trường khác nhau (development, production).
-
-**Ví dụ tổng quát trong server.js:**
-
-```js
-app.listen(process.env.PORT); // Dùng biến PORT để chạy server
+```dockerfile
+FROM node:24
+WORKDIR /app
+COPY package*.json .
+RUN npm install
+COPY . .
+ARG DEFAULT_PORT=80
+ENV PORT=$DEFAULT_PORT
+EXPOSE $PORT
+CMD ["npm", "start"]
 ```
 
----
-
-## 🔍 Cách Thiết Lập Biến Môi Trường
-
-### Trường Hợp 1 Biến
-
-- **Trong Dockerfile:**  
-
-  Sử dụng lệnh ENV để đặt giá trị mặc định.
-
-  ```
-  ENV PORT=80
-  EXPOSE $PORT
-  ```
-
-  Container sẽ chạy server trên cổng 80 (nếu không bị ghi đè).
-
-- **Khi chạy container:**  
-
-  Ghi đè biến bằng `--env` hoặc `-e`.
-
-  ```
-  docker run --env PORT=8080 my-image
-  # Hoặc ngắn hơn
-  docker run -e PORT=8080 my-image
-  ```
+Giải thích: `ARG DEFAULT_PORT=80` đặt giá trị mặc định cho port, được gán vào biến môi trường PORT qua ENV.
 
 ---
 
-### Trường Hợp Nhiều Biến Với File .env
+## 🔍 Build Image Với 2 Port Khác Nhau
 
-- **Tạo file .env trong dự án:**
-
-  ```
-  PORT=8080
-  API_KEY=your-secret-key
-  ```
-
-- **Dùng file .env khi chạy container:**
+- **Build với port mặc định (80):**
 
   ```
-  docker run --env-file ./.env my-image
+  docker build -t my-app:default .
   ```
 
-- **Trong Dockerfile có làm được không?** Không, ENV trong Dockerfile không hỗ trợ đọc file `.env` trực tiếp. File `.env` chỉ dùng ở runtime với `--env-file`.
+  Image dùng DEFAULT_PORT=80.
+
+- **Build với port khác (8080):**
+
+  ```
+  docker build -t my-app:8080 --build-arg DEFAULT_PORT=8080 .
+  ```
+
+  Ghi đè DEFAULT_PORT thành 8080, container mở cổng 8080.
 
 ---
 
-## 🔍 So Sánh Các Phương Pháp
+## 🔍 Tình Huống Phổ Biến Sử Dụng ARG
 
-| Phương Pháp         | Ưu Điểm                                 | Nhược Điểm                                         | Khi Dùng                        |
-|---------------------|------------------------------------------|----------------------------------------------------|----------------------------------|
-| ENV trong Dockerfile| Giá trị mặc định rõ ràng, nhúng vào image| Hardcode, không linh hoạt, có thể lộ qua docker history | Giá trị cố định, không nhạy cảm (như cổng mặc định) |
-| --env hoặc -e       | Linh hoạt, dễ ghi đè khi chạy            | Phải nhập thủ công, không tiện với nhiều biến       | Thay đổi nhanh 1-2 biến         |
-| --env-file .env     | Quản lý nhiều biến dễ dàng, không nhúng vào image | Cần file riêng, phải cẩn thận không commit file .env | Nhiều biến, cần bảo mật (như production) |
+Dự án lớn:
 
----
+- Tùy chỉnh phiên bản dependency (như ARG NODE_VERSION=18 để chọn Node.js).
 
-## 📝 Ghi Chú Bảo Mật
+- Đặt cấu hình build-time (port, proxy, môi trường build).
 
-🔐 **Một ghi chú quan trọng về biến môi trường và bảo mật:**  
+- Ví dụ: Build image khác nhau cho `dev/test/prod` mà không cần nhiều `Dockerfile`.
 
-- Tùy thuộc vào loại dữ liệu bạn lưu trong biến môi trường, bạn có thể không muốn bao gồm dữ liệu nhạy cảm trực tiếp trong Dockerfile.
+**Cách sử dụng:**
 
-- Thay vào đó, hãy sử dụng một file biến môi trường riêng chỉ được dùng khi chạy container (ví dụ: với `docker run`).  
+- Định nghĩa `ARG` trong `Dockerfile`.
 
-- Nếu không, giá trị sẽ bị "nhúng vào image" và mọi người có thể đọc được qua lệnh `docker history <image>`. 
-
-- Với một số giá trị, điều này không quan trọng, nhưng với thông tin đăng nhập, khóa bí mật, v.v., bạn chắc chắn muốn tránh điều đó!  
-
-- Nếu dùng file riêng, giá trị không nằm trong image vì bạn chỉ định file đó khi chạy `docker run`. Nhưng hãy đảm bảo không commit file riêng đó vào kho lưu trữ mã nguồn nếu bạn dùng hệ thống kiểm soát phiên bản.
+- Truyền giá trị khi build với `--build-arg`.
 
 ---
 
-## 🛠️ Best Practices
+## 🔍 ARG Là Gì Và Tác Dụng?
 
-- Dùng `--env-file .env` cho dữ liệu nhạy cảm hoặc nhiều biến, đặc biệt ở production.
+- **Định nghĩa:** ARG là tham số build-time, chỉ tồn tại trong quá trình build image.
 
-- Không commit file .env vào kho mã nguồn (thêm vào .gitignore).
+- **Tác dụng:**
 
-- Kiểm tra `docker history` để đảm bảo không lộ thông tin.
+  - Tùy chỉnh image mà không sửa Dockerfile.
+
+  - Truyền giá trị động (version, port) khi build.
+
+---
+
+## 🔍 Đặt ARG Ở Đâu Tốt Nhất?
+
+- **Vị trí tối ưu:** Đặt ARG ngay sau FROM hoặc trước bước cần dùng (như ENV, EXPOSE).
+
+- **Lý do:** ARG chỉ có hiệu lực từ lúc khai báo đến cuối build, đặt sớm để dùng ở nhiều bước.
+
+- Trong Dockerfile trên: `ARG DEFAULT_PORT=80` đặt trước ENV và EXPOSE là hợp lý.
+
+> ⚠️ **Lưu ý:** ARG không dùng cho runtime (dùng ENV để truyền vào runtime). Tránh dùng ARG cho dữ liệu nhạy cảm (có thể lộ qua docker history).
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Biến môi trường linh hoạt, dùng trong server.js (như process.env.PORT).
+✅ ARG là tham số build-time, tùy chỉnh image linh hoạt.
 
-✅ Thiết lập: ENV trong Dockerfile, --env hoặc --env-file .env khi chạy.
+✅ Ví dụ: Build với --build-arg DEFAULT_PORT=8080.
 
-✅ Bảo mật: Dùng file .env cho runtime, không nhúng dữ liệu nhạy cảm vào image.
+✅ Dùng khi: Cấu hình build-time (version, port) trong dự án lớn.
 
-✅ Best practice: Kết hợp ENV cho mặc định, .env cho production.
+✅ Đặt ARG: Sau FROM, trước bước sử dụng.
 
 ---
 
-### 🚀 Biến môi trường giúp cấu hình Docker an toàn và hiệu quả!
+### 🚀 Dùng ARG để build image hiệu quả và linh hoạt!
