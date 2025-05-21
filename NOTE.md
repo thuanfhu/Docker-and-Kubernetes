@@ -1,98 +1,105 @@
-# 📝 A Look at Read-Only Volumes
+# 📝 Managing Docker Volumes
 
 ## 📌 Tổng Quan
 
-Read-only volumes trong Docker là cách gắn các thư mục hoặc volume vào container với quyền chỉ đọc (read-only), giúp bảo vệ dữ liệu khỏi bị thay đổi.
+`Docker Volumes` là cách lưu trữ dữ liệu bền vững ngoài container, giúp quản lý file dễ dàng. Theo tài liệu chính thức của Docker, bạn có thể tạo, liệt kê, kiểm tra, xóa, và dọn dẹp volume bằng các lệnh cụ thể.
 
 ---
 
-## 🚀 Lệnh Và Cách Hoạt Động
+## 🚀 Các Lệnh Quản Lý Volume
 
-**Lệnh hiện tại:**
+### 📋 Liệt kê volume (`docker volume ls`)
 
-```
-docker run -d -p 3000:80 --rm --name my-container -v feedback:/app/feedback -v path-to-host:/app:ro -v /app/node_modules -v /app/temp nodejs-app:volumes
-```
+- Hiển thị tất cả volume hiện có.
 
-**Ý nghĩa:**
+- Ví dụ:
 
-- `-v path-to-host:/app:ro`: Gắn thư mục từ máy chủ (host) vào `/app` trong container, chỉ cho phép đọc.
+  ```
+  docker volume ls
+  ```
 
-- `-v feedback:/app/feedback`: Tạo volume tên feedback để lưu file feedback, cho phép đọc và ghi.
-
-- `-v /app/node_modules` và `-v /app/temp`: Tạo volume ẩn danh để bảo vệ thư viện và lưu file tạm, cho phép đọc và ghi.
+- Kết quả: Danh sách volume với cột DRIVER và VOLUME NAME.
 
 ---
 
-## ❓ Tại sao dùng `:ro`?
+### ➕ Tạo volume (thủ công hoặc tự động)
 
-`:ro` bảo vệ code (như `server.js`, `feedback.html`) từ `path-to-host`, đảm bảo container chỉ đọc, không ghi. 
+- **Thủ công:**  
 
-Trong `server.js`, container đọc `feedback.html` để hiển thị form, nhưng không sửa file, nên `:ro` rất phù hợp.
+  Tạo volume trước với:
 
----
+  ```
+  docker volume create my-volume
+  ```
 
-## 🔍 Quyền Truy Cập và Đồng Bộ Dữ Liệu
+- **Tự động:**  
 
-### 📂 Quyền Đọc/Ghi Của Từng Thư Mục
+  Khi chạy container với `-v`, Docker tự tạo volume nếu chưa tồn tại:
 
-| Thư mục              | Loại Volume         | Quyền truy cập      | Ghi chú                                                                 |
-|----------------------|--------------------|---------------------|-------------------------------------------------------------------------|
-| `/app`               | Bind Mount (`:ro`) | Chỉ đọc             | Chứa code từ host, không thể ghi. Nếu ghi sẽ báo lỗi "read-only file system". |
-| `/app/feedback`      | Named Volume       | Đọc và ghi          | Lưu file feedback (vd: `title.txt`), không liên quan đến host.          |
-| `/app/temp`          | Anonymous Volume   | Đọc và ghi          | Lưu file tạm (vd: `temp-title.txt`), không liên quan đến host.          |
-| `/app/node_modules`  | Anonymous Volume   | Đọc và ghi*         | Chứa thư viện từ image, bảo vệ khỏi Bind Mount ghi đè. Code hiện tại không ghi vào đây. |
-
-> 📝 **Lưu ý:** Container mặc định có thể đọc và ghi vào mọi thư mục trong layer của nó, trừ khi bị giới hạn bởi `:ro` hoặc quyền hệ thống.
+  ```
+  docker run -v my-volume:/app/data my-image
+  ```
 
 ---
 
-## 🔄 Dữ Liệu Di Chuyển Như Thế Nào?
+### 🔎 Kiểm tra chi tiết (`docker volume inspect`)
 
-### 🖥️ Từ máy chủ (host) đến container
+- Xem thông tin chi tiết của volume, như đường dẫn lưu trữ:
 
-- Sửa file trong `path-to-host` (như thêm `console.log("Hello")` vào `server.js`) sẽ tự động cập nhật trong `/app` của container nhờ Bind Mount.
+  ```
+  docker volume inspect my-volume
+  ```
 
-- Ví dụ: Sửa `feedback.html` trên host, truy cập http://localhost:3000, bạn sẽ thấy giao diện mới ngay lập tức, không cần build lại image.
-
-### 📦 Từ container đến máy chủ (host)
-
-- Container không thể ghi ngược lên `path-to-host`, vì `/app` là read-only (`:ro`).
-
-- Ví dụ: Nếu `server.js` cố tạo file mới trong `/app`, sẽ báo lỗi.
-
-### 🔁 Thay đổi trong container và ảnh hưởng đến volume/host
-
-- **/app/feedback:** Khi gửi feedback, `server.js` tạo file `title.txt` trong `/app/feedback`. File này lưu trong volume feedback, host không thấy, nhưng volume cập nhật và giữ file ngay cả khi container dừng.
-
-- **/app/temp:** `server.js` tạo file tạm `temp-title.txt`, sau đó xóa. File này lưu trong volume ẩn danh, host không thấy, nhưng volume cập nhật cho đến khi container bị xóa.
-
-- **/app/node_modules:** Code hiện tại không ghi vào đây. Nếu có thay đổi (như cài thư viện mới), volume ẩn danh sẽ lưu, host không thấy.
-
-> 💡 **Tóm lại:** Thay đổi trong container chỉ lưu vào volume, không ảnh hưởng host.
+- Kết quả: Hiển thị JSON với thông tin như "Mountpoint" (thường là `/var/lib/docker/volumes/my-volume/_data` trên Linux).
 
 ---
 
-## 📝 Tóm Lại Quyền và Đồng Bộ
+### 🗑️ Xóa volume (`docker volume rm`)
 
-- **Quyền:** `/app` chỉ đọc, `/app/feedback` và `/app/temp` đọc + ghi.
+- Xóa volume cụ thể:
 
-- **Đồng bộ:** Sửa host → container (qua Bind Mount), container → volume (không host).
+  ```
+  docker volume rm my-volume
+  ```
 
-- **Ví dụ:** Sửa code trên host, container cập nhật ngay. Gửi feedback, file lưu trong volume, host không thấy.
+- Lỗi: Nếu volume đang được container sử dụng, sẽ báo lỗi "volume is in use". Dừng hoặc xóa container trước (sử dụng `docker rm` với force `-f` nếu cần).
+
+---
+
+### 🧹 Dọn dẹp volume (`docker volume prune`)
+
+- Xóa tất cả volume không được sử dụng:
+
+  ```
+  docker volume prune
+  ```
+  
+- ⚠️ Cảnh báo: Xác nhận trước, vì lệnh này xóa vĩnh viễn volume không liên kết container.
+
+---
+
+## ⚠️ Lưu Ý Quan Trọng
+
+❌ Không xóa volume đang dùng: Dừng container trước khi `docker volume rm`.
+
+✅ Quản lý cẩn thận: Dùng `docker volume ls` và `inspect` để theo dõi.
+
+✅ Dọn dẹp định kỳ: `docker volume prune` giúp tiết kiệm dung lượng.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ `:ro` tạo read-only volume, bảo vệ `/app` khỏi bị ghi.
+✅ Liệt kê: `docker volume ls`
 
-✅ Quyền: `/app` chỉ đọc, `/app/feedback` và `/app/temp` đọc + ghi.
+✅ Tạo: `docker volume create` hoặc `-v` khi chạy
 
-✅ Đồng bộ: Sửa host → container (qua Bind Mount), container → volume (không host).
+✅ Kiểm tra: `docker volume inspect`
 
-✅ Lợi ích: Bảo vệ code, quản lý dữ liệu động an toàn.
+✅ Xóa: `docker volume rm`, chú ý container sử dụng
+
+✅ Dọn dẹp: `docker volume prune` cho volume thừa
 
 ---
 
-### 🚀 Read-only volumes giúp kiểm soát dữ liệu trong Docker dễ dàng!
+### 🚀 Quản lý volume hiệu quả để tối ưu hóa Docker!
