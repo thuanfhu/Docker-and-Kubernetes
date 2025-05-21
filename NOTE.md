@@ -1,101 +1,82 @@
-# 📝 Using Build Arguments (ARG)
+# 📝 Introduction to Networking (Cross-)Container Communication
 
 ## 📌 Tổng Quan
 
-ARG trong Docker cho phép truyền tham số khi build image, giúp tùy chỉnh image mà không cần sửa Dockerfile. Theo tài liệu chính thức của Docker, ARG chỉ tồn tại trong quá trình build, không ảnh hưởng runtime.
+🌐 Docker networking cho phép container giao tiếp với nhau, với host, hoặc với thế giới bên ngoài (WWW).
 
 ---
 
-## 🚀 Dockerfile Hiện Tại
+## 🚀 Các Trường Hợp Giao Tiếp
 
-```dockerfile
-FROM node:24
-WORKDIR /app
-COPY package*.json .
-RUN npm install
-COPY . .
-ARG DEFAULT_PORT=80
-ENV PORT=$DEFAULT_PORT
-EXPOSE $PORT
-CMD ["npm", "start"]
-```
+### 1️⃣ Container to WWW
 
-Giải thích: `ARG DEFAULT_PORT=80` đặt giá trị mặc định cho port, được gán vào biến môi trường PORT qua ENV.
+- **Mô tả:** Container giao tiếp với internet (ví dụ: tải dữ liệu từ API công cộng).
+
+- **Yêu cầu:** Container cần truy cập mạng bên ngoài, thường qua default bridge network.
+
+- **Cấu hình:** Không cần đặc biệt nếu host có internet.
+
+- **Ví dụ:** Container chạy ứng dụng gọi API:  
+
+  `https://api.example.com`
 
 ---
 
-## 🔍 Build Image Với 2 Port Khác Nhau
+### 2️⃣ Container to Local Host Machine
 
-- **Build với port mặc định (80):**
+- **Mô tả:** Container giao tiếp với dịch vụ trên host (ví dụ: database, Redis).
 
-  ```
-  docker build -t my-app:default .
-  ```
+- **Dịch vụ thường gặp:** Database (MySQL, PostgreSQL - cổng 3306, 5432), Cache (Redis - cổng 6379), Message Queue (RabbitMQ - cổng 5672).
 
-  Image dùng DEFAULT_PORT=80.
+- **Cách thực hiện:** Dùng `host.docker.internal` (Windows/Mac) hoặc IP host (Linux) để truy cập.
 
-- **Build với port khác (8080):**
+- **Ví dụ:** Container gọi database trên host:  
 
-  ```
-  docker build -t my-app:8080 --build-arg DEFAULT_PORT=8080 .
-  ```
-
-  Ghi đè DEFAULT_PORT thành 8080, container mở cổng 8080.
+  `mysql://host.docker.internal:3306`
 
 ---
 
-## 🔍 Tình Huống Phổ Biến Sử Dụng ARG
+### 3️⃣ Container to Container
 
-Dự án lớn:
+- **Mô tả:** Container giao tiếp với nhau (ví dụ: ứng dụng web gọi database).
 
-- Tùy chỉnh phiên bản dependency (như ARG NODE_VERSION=18 để chọn Node.js).
+- **Cách thực hiện:** Dùng user-defined network để hỗ trợ DNS resolution.
 
-- Đặt cấu hình build-time (port, proxy, môi trường build).
+- **Ví dụ:**  
 
-- Ví dụ: Build image khác nhau cho `dev/test/prod` mà không cần nhiều `Dockerfile`.
+  - Tạo network: `docker network create my-net`
 
-**Cách sử dụng:**
+  - Chạy container:  
 
-- Định nghĩa `ARG` trong `Dockerfile`.
+    `docker run --network my-net --name web my-web-app`  
+    `docker run --network my-net --name db postgres`
 
-- Truyền giá trị khi build với `--build-arg`.
+  - Container web gọi db qua tên:  
 
----
-
-## 🔍 ARG Là Gì Và Tác Dụng?
-
-- **Định nghĩa:** ARG là tham số build-time, chỉ tồn tại trong quá trình build image.
-
-- **Tác dụng:**
-
-  - Tùy chỉnh image mà không sửa Dockerfile.
-
-  - Truyền giá trị động (version, port) khi build.
+    `postgres://db:5432`
 
 ---
 
-## 🔍 Đặt ARG Ở Đâu Tốt Nhất?
+## 🔍 Best Practices: Phân Chia Trách Nhiệm Container
 
-- **Vị trí tối ưu:** Đặt ARG ngay sau FROM hoặc trước bước cần dùng (như ENV, EXPOSE).
+- **Nguyên tắc:** Mỗi container chỉ nên đảm nhiệm một trách nhiệm duy nhất (Single Responsibility Principle).
 
-- **Lý do:** ARG chỉ có hiệu lực từ lúc khai báo đến cuối build, đặt sớm để dùng ở nhiều bước.
+- **Ví dụ phân chia:** Container cho code (Node.js app), database (PostgreSQL, MySQL), cache (Redis), proxy (Nginx).
 
-- Trong Dockerfile trên: `ARG DEFAULT_PORT=80` đặt trước ENV và EXPOSE là hợp lý.
-
-> ⚠️ **Lưu ý:** ARG không dùng cho runtime (dùng ENV để truyền vào runtime). Tránh dùng ARG cho dữ liệu nhạy cảm (có thể lộ qua docker history).
+- **Lợi ích:** Dễ mở rộng, quản lý, bảo trì và tối ưu hiệu suất (mỗi container chỉ xử lý một tác vụ).
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ ARG là tham số build-time, tùy chỉnh image linh hoạt.
+✅ Container to WWW: Giao tiếp trực tiếp qua internet.
 
-✅ Ví dụ: Build với --build-arg DEFAULT_PORT=8080.
+✅ Container to Host: Gọi dịch vụ host (MySQL, Redis) qua host.docker.internal.
 
-✅ Dùng khi: Cấu hình build-time (version, port) trong dự án lớn.
+✅ Container to Container: Dùng user-defined network, giao tiếp qua tên.
 
-✅ Đặt ARG: Sau FROM, trước bước sử dụng.
+✅ Best Practices: Một container một trách nhiệm (code, DB, cache).
 
 ---
 
-### 🚀 Dùng ARG để build image hiệu quả và linh hoạt!
+### 🚀 Hiểu networking để kết nối container hiệu quả!
