@@ -1,78 +1,52 @@
-# 📝 Introducing Docker Networks: Elegant Container-to-Container Communication
+# 📝 How Docker Resolves IP Addresses?
 
 ## 📌 Tổng Quan
 
-🌐 `Docker networks` giải quyết vấn đề giao tiếp container bằng cách cho phép container gọi nhau qua tên thay vì IP. 
+🌐 Docker quản lý IP addresses trong container thông qua mạng nội bộ (networking).  
 
-> Khác với volumes, network không tự động tạo qua `docker run` mà phải tạo thủ công bằng `docker network create`.
-
----
-
-## 🚀 Cách Thực Hiện
-
-### 1️⃣ Tạo Network Thủ Công
-
-Tạo user-defined network:
-
-```
-docker network create my-network
-```
-
-💡 **Lưu ý:** Default bridge network không hỗ trợ DNS resolution, nên cần user-defined network.
+> Docker không thay đổi source code của ứng dụng mà chỉ kiểm soát môi trường chạy, bao gồm việc gán và phân giải IP.
 
 ---
 
-### 2️⃣ Chạy Container Dịch Vụ (MongoDB)
+## 🚀 Cách Docker Phân Giải IP Addresses
 
-Chạy container MongoDB trong network:
+### 1️⃣ Gán IP Tự Động
 
-```
-docker run -d --name mongodb --network my-network mongo
-```
+- Docker tự động gán IP cho container khi chạy trong một network (ví dụ: bridge hoặc user-defined).
 
-- `--network my-network`: Gắn container vào network vừa tạo.
+- **Kiểm tra IP:**
+  ```
+  docker container inspect <container-name>
+  ```
 
-- Không cần `-p` cho MongoDB: Vì giao tiếp nội bộ giữa container không yêu cầu cổng ra host.
+- **Kết quả:** Tìm IPAddress trong NetworkSettings, ví dụ: `172.17.0.2`.
 
 ---
 
-### 3️⃣ Chạy Container Ứng Dụng
+### 2️⃣ Phân Giải Tên Sang IP
 
-Cập nhật mã ứng dụng để gọi MongoDB qua tên container thay vì IP:
+- Trong user-defined network, Docker sử dụng DNS resolution để ánh xạ tên container sang IP.
 
-```js
-mongoose
-  .connect('mongodb://mongodb:27017/swfavorites')
-  .then(() => {
-    app.listen(3000);
-  })
-  .catch((err) => {
-    console.log(err);
-  });
-```
+- Ví dụ: Container web gọi db qua tên, Docker tự động phân giải `db` thành IP tương ứng.
 
-Chạy container ứng dụng:
+---
 
-```
-docker run -d --name my-app --network my-network -p 3000:3000 my-app-image
-```
+### 3️⃣ Không Thay Đổi Source Code
 
-- `--network my-network`: Đảm bảo container my-app cùng network với mongodb.
+- Docker chỉ kiểm soát môi trường (network, runtime) và không sửa đổi source code của ứng dụng.
 
-- Dùng `-p 3000:3000`: Cần nếu muốn truy cập ứng dụng từ host (localhost:3000).
+- Ứng dụng (như app.js) dùng IP hoặc tên container mà Docker cung cấp.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Tạo network: `docker network create my-network`.
+✅ Gán IP: Docker tự động gán IP cho container trong network.
 
-✅ Chạy container: Dùng `--network` để gắn container vào network.
+✅ DNS Resolution: User-defined network phân giải tên thành IP.
 
-✅ Kết nối qua tên: Gọi container bằng tên (ví dụ: `mongodb:27017`).
-
-✅ `-p` cần khi: Truy cập container từ host, không cần cho giao tiếp nội bộ.
+✅ Không thay đổi code: Docker chỉ quản lý môi trường, không chỉnh sửa source code.
 
 ---
 
-### 🚀 Docker network giúp container giao tiếp dễ dàng qua tên!
+### 🚀 Hiểu cách Docker quản lý IP để tối ưu kết nối container!
