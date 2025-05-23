@@ -1,83 +1,78 @@
-# 📝 Container-to-Container Communication: A Basic Approach
+# 📝 Introducing Docker Networks: Elegant Container-to-Container Communication
 
 ## 📌 Tổng Quan
 
-🔗 `Container-to-container communication` cho phép các container giao tiếp với nhau, như giữa ứng dụng và dịch vụ (database, cache, API server). Cách tiếp cận cơ bản là dùng `IP của container` để kết nối trực tiếp.
+🌐 `Docker networks` giải quyết vấn đề giao tiếp container bằng cách cho phép container gọi nhau qua tên thay vì IP. 
+
+> Khác với volumes, network không tự động tạo qua `docker run` mà phải tạo thủ công bằng `docker network create`.
 
 ---
 
 ## 🚀 Cách Thực Hiện
 
-**1️⃣ Chạy Container Dịch Vụ**
-  
-Tạo container cho một dịch vụ (ví dụ: MongoDB):
+### 1️⃣ Tạo Network Thủ Công
+
+Tạo user-defined network:
 
 ```
-docker run -d --name service-container mongo
+docker network create my-network
 ```
 
-Ví dụ: Container mongo chạy MongoDB.
+💡 **Lưu ý:** Default bridge network không hỗ trợ DNS resolution, nên cần user-defined network.
 
 ---
 
-**2️⃣ Lấy IP Của Container Dịch Vụ**  
+### 2️⃣ Chạy Container Dịch Vụ (MongoDB)
 
-Kiểm tra IP bằng lệnh:
+Chạy container MongoDB trong network:
 
 ```
-docker container inspect service-container
+docker run -d --name mongodb --network my-network mongo
 ```
 
-Trong phần NetworkSettings, tìm IPAddress, ví dụ: `"IPAddress": "172.17.0.2"`. IP này dùng để container khác kết nối tới.
+- `--network my-network`: Gắn container vào network vừa tạo.
+
+- Không cần `-p` cho MongoDB: Vì giao tiếp nội bộ giữa container không yêu cầu cổng ra host.
 
 ---
 
-**3️⃣ Kết Nối Từ Container Ứng Dụng** 
+### 3️⃣ Chạy Container Ứng Dụng
 
-Trong mã ứng dụng, kết nối tới container dịch vụ bằng IP:
+Cập nhật mã ứng dụng để gọi MongoDB qua tên container thay vì IP:
 
 ```js
-// Ví dụ: Kết nối tới MongoDB từ ứng dụng Node.js
-mongoose.connect(
-  'mongodb://172.17.0.2:27017/swfavorites',
-  { 
-    useNewUrlParser: true, 
-    useUnifiedTopology: true 
-  },
-  (err) => {
-    if (err) {
-      console.log(err);
-    } else {
-      app.listen(3000);
-    }
-  }
-);
+mongoose
+  .connect('mongodb://mongodb:27017/swfavorites')
+  .then(() => {
+    app.listen(3000);
+  })
+  .catch((err) => {
+    console.log(err);
+  });
 ```
 
-Container ứng dụng gọi container dịch vụ (MongoDB) qua IP `172.17.0.2` trên cổng `27017`.
+Chạy container ứng dụng:
 
----
+```
+docker run -d --name my-app --network my-network -p 3000:3000 my-app-image
+```
 
-## ⚠️ Vấn Đề Với Cách Tiếp Cận
+- `--network my-network`: Đảm bảo container my-app cùng network với mongodb.
 
-- ❗ **IP không cố định:** IP của container (như `172.17.0.2`) thay đổi mỗi khi container khởi động lại hoặc trong môi trường network phức tạp, gây lỗi kết nối.
-
-- ❗ **Khó quản lý:** Phải kiểm tra IP thủ công mỗi lần, không phù hợp khi mở rộng hoặc tự động hóa.
-
-- ❗ **Không hỗ trợ DNS:** Default bridge network không cho phép gọi container bằng tên, phải dùng IP.
+- Dùng `-p 3000:3000`: Cần nếu muốn truy cập ứng dụng từ host (localhost:3000).
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Container dịch vụ: Chạy với `docker run --name service-container`.
+✅ Tạo network: `docker network create my-network`.
 
-✅ Lấy IP: Dùng `docker container inspect` để tìm IPAddress.
+✅ Chạy container: Dùng `--network` để gắn container vào network.
 
-✅ Kết nối: Ứng dụng dùng IP để gọi dịch vụ (ví dụ: MongoDB).
+✅ Kết nối qua tên: Gọi container bằng tên (ví dụ: `mongodb:27017`).
 
-✅ Vấn đề: IP động, khó quản lý, không hỗ trợ DNS.
+✅ `-p` cần khi: Truy cập container từ host, không cần cho giao tiếp nội bộ.
 
 ---
 
-### 🚀 Cách cơ bản để container giao tiếp, nhưng không tối ưu!
+### 🚀 Docker network giúp container giao tiếp dễ dàng qua tên!

@@ -69,7 +69,7 @@ app.get('/people', async (req, res) => {
 });
 
 mongoose
-  .connect('mongodb://172.17.0.2:27017/swfavorites')
+  .connect('mongodb://mongodb:27017/swfavorites') // mongodb is container name (docker network)
   .then(() => {
     app.listen(3000);
   })
