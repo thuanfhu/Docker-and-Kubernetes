@@ -5,6 +5,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
+require('dotenv').config();
 
 const Goal = require('./models/goal');
 
@@ -84,10 +85,7 @@ app.delete('/goals/:id', async (req, res) => {
 });
 
 mongoose
-  .connect('mongodb://host.docker.internal:27017/course-goals', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(`mongodb://mongodb:27017/course-goals?authSource=admin`)
   .then(() => {
     console.log('CONNECTED TO MONGODB');
     app.listen(80);

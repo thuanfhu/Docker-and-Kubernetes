@@ -1,35 +1,54 @@
-# 📝 Container Communication: MongoDB, Node.js Backend, React Frontend, and Host Interaction
+# 📝 Optimized Container Communication: MongoDB, Node.js Backend, React Frontend with Networks and Volumes
 
 ## 📌 Tổng Quan
 
-🔗 Hướng dẫn này giải thích cách ba container (MongoDB, backend Node.js, frontend React.js) tương tác với nhau và với host machine, giải đáp các thắc mắc về networking và cách fetch hoạt động trong Docker.
+🚀 Hướng dẫn này tối ưu hóa giao tiếp giữa container MongoDB, backend Node.js, và frontend React.js bằng cách sử dụng network, named volume, anonymous volume, bind mount, và .dockerignore. Điều này đảm bảo hiệu suất, bảo mật, và dễ quản lý theo tài liệu Docker 2025.
 
 ---
 
 ## 🚀 Các Bước Thực Hiện
 
-### 1️⃣ Chạy Container MongoDB (mongodb)
+### 1️⃣ Tạo Docker Network
 
 ```
-docker run --name mongodb --rm -p 27017:27017 -d mongo
+docker network create my-network
 ```
 
-- `-p 27017:27017`: Ánh xạ cổng 27017 của container mongodb ra cổng 27017 trên host.
-
-- Container mongodb có thể truy cập từ host tại `localhost:27017`.
+**Lý do:** User-defined network (my-network) hỗ trợ DNS resolution, cho phép container gọi nhau qua tên (ví dụ: mongodb) thay vì IP, khắc phục hạn chế của default bridge network.
 
 ---
 
-### 2️⃣ Chạy Container Backend Node.js (node-container) và Kết Nối Với MongoDB
+### 2️⃣ Chạy Container MongoDB (mongodb)
 
-Trong mã backend (`app.js`) của container node-container, kết nối với MongoDB:
+```
+docker run --name mongodb -d --rm --network my-network -v data:/data/db mongo
+```
+
+**Giải thích:**
+
+- `--name mongodb`: Đặt tên container để các container khác gọi qua DNS.
+
+- `-d`: Chạy nền.
+
+- `--rm`: Tự xóa khi dừng (phù hợp với thử nghiệm).
+
+- `--network my-network`: Gắn vào network đã tạo để giao tiếp qua tên.
+
+- `-v data:/data/db`: Sử dụng named volume data để lưu dữ liệu MongoDB tại `/data/db` trong container. Named volume do Docker quản lý (thường ở /var/lib/docker/volumes/), đảm bảo dữ liệu bền vững và dễ backup.
+
+**Tại sao làm vậy?** Named volume tránh mất dữ liệu khi container dừng, và network giúp giao tiếp ổn định giữa container.
+
+---
+
+### 3️⃣ Chạy Container Backend Node.js (nodejs-container)
+
+**Cập Nhật Mã Nguồn**
+
+**File app.js:**
 
 ```js
 mongoose
-  .connect('mongodb://host.docker.internal:27017/course-goals', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(`mongodb://mongodb:27017/course-goals?authSource=admin`)
   .then(() => {
     console.log('CONNECTED TO MONGODB');
     app.listen(80);
@@ -40,82 +59,218 @@ mongoose
   });
 ```
 
-- **Giải thích:** `host.docker.internal` là tên DNS đặc biệt ánh xạ đến IP của host. Container node-container dùng `host.docker.internal:27017` để gọi container mongodb thông qua cổng 27017 trên host (ánh xạ bởi `-p`).
+**File package.json:**
 
-- **Sai nếu dùng localhost:** Trong container node-container, `localhost` là chính nó, không phải host, nên không thể gọi mongodb.
-
-- **Build và chạy container node-container:**
-
-  ```
-  docker build -t node-backend:image .
-  docker run --name node-container -d --rm -p 80:80 node-backend:image
-  ```
-
-- `-p 80:80`: Ánh xạ cổng 80 của container node-container ra `localhost:80` trên host.
-
-- Host truy cập `localhost:80` sẽ gọi API từ container node-container.
-
----
-
-### 3️⃣ Chạy Container Frontend React.js (react-container) và Kết Nối Với Backend
-
-Mã frontend (`App.js`) trong container react-container gọi API backend:
-
-```js
-const response = await fetch('http://localhost:80/goals');
+```json
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "thuanflu",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "mongoose": "^8.15.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
 ```
 
-- **Build và chạy container react-container:**
+**File Dockerfile:**
 
-  ```
-  docker build -t react-frontend .
-  docker run --name react-container --rm -p 3000:3000 -d react-frontend
-  ```
+```
+FROM node:20
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 80
+CMD ["npm", "start"]
+```
 
-- `-p 3000:3000`: Ánh xạ cổng 3000 của container react-container ra `localhost:3000` trên host.
+**File .dockerignore:**
+
+```
+node_modules
+Dockerfile
+.git
+```
+
+**Build và Chạy Container**
+
+```
+docker build -t nodejs-backend:image .
+docker run --name nodejs-container -d --rm -p 80:80 -v nodejs-logs:/app/logs -v /app/node_modules -v "D:\Workspace for Learning\My Projects\Learn Technology\Docker-and-Kubernetes\Multi-Container Application\backend:/app" --network my-network nodejs-backend:image
+```
+
+**Giải thích:**
+
+- `-p 80:80`: Ánh xạ cổng 80 để host truy cập backend qua localhost:80.
+
+- `-v nodejs-logs:/app/logs`: Named volume nodejs-logs lưu log, quản lý dễ dàng.
+
+- `-v /app/node_modules`: Anonymous volume ngăn host ghi đè thư mục node_modules trong container.
+
+- `-v "D:\...\backend:/app"`: Bind mount ánh xạ thư mục host vào /app trong container, cho phép chỉnh sửa code trực tiếp từ host.
+
+- `--network my-network`: Gắn vào network để gọi mongodb qua tên.
+
+**Tại sao làm vậy?** Volume lưu dữ liệu/log, bind mount hỗ trợ phát triển, network tối ưu giao tiếp.
 
 ---
 
-## 💡 Giải Thích Chi Tiết Thắc Mắc
+### 4️⃣ Chạy Container Frontend React.js (reactjs-container)
 
-### Thắc mắc 1: Container react-container gọi được localhost:80 của container node-container? Tại sao không cần host.docker.internal?
+**Cập Nhật Mã Nguồn**
 
-- Đúng, container react-container không gọi trực tiếp `localhost:80`. Thay vào đó, container react-container chỉ phục vụ các file tĩnh (HTML, CSS, JavaScript) cho trình duyệt trên host khi truy cập `localhost:3000`. Lệnh `fetch('http://localhost:80/goals')` trong App.js được thực thi bởi trình duyệt trên host, không phải trong container react-container.
+**File App.js (giữ nguyên localhost:80):**
 
-- **Tại sao không cần host.docker.internal?** Vì fetch chạy trên trình duyệt (host), `localhost:80` là địa chỉ trên host, ánh xạ đến container node-container (qua `-p 80:80`). `host.docker.internal` chỉ cần khi container gọi host, không áp dụng ở đây.
+```js
+import React, { useState, useEffect } from 'react';
 
----
+import GoalInput from './components/goals/GoalInput';
+import CourseGoals from './components/goals/CourseGoals';
+import ErrorAlert from './components/UI/ErrorAlert';
 
-### Thắc mắc 2: Lệnh fetch thuộc host machine, còn localhost:80 là container node-container?
+function App() {
+  const [loadedGoals, setLoadedGoals] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-- Đúng. Khi host truy cập `localhost:3000`, trình duyệt tải file JavaScript từ container react-container. JavaScript thực thi lệnh fetch trên trình duyệt (host), gọi `localhost:80` – địa chỉ trên host ánh xạ đến cổng 80 của container node-container. Do đó, giao tiếp là giữa trình duyệt (host) và container node-container, không phải giữa container react-container và node-container.
+  useEffect(function () {
+    async function fetchData() {
+      setIsLoading(true);
+      try {
+        const response = await fetch('http://localhost:80/goals');
+        const resData = await response.json();
+        if (!response.ok) throw new Error(resData.message || 'Fetching failed.');
+        setLoadedGoals(resData.goals);
+      } catch (err) {
+        setError(err.message || 'Fetching failed.');
+      }
+      setIsLoading(false);
+    }
+    fetchData();
+  }, []);
 
----
+  async function addGoalHandler(goalText) {
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://localhost:80/goals', {
+        method: 'POST',
+        body: JSON.stringify({ text: goalText }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const resData = await response.json();
+      if (!response.ok) throw new Error(resData.message || 'Adding failed.');
+      setLoadedGoals((prevGoals) => [{ id: resData.goal.id, text: goalText }, ...prevGoals]);
+    } catch (err) {
+      setError(err.message || 'Adding failed.');
+    }
+    setIsLoading(false);
+  }
 
-> 📝 **Lưu ý:** Các container chạy trên default bridge network, không hỗ trợ DNS resolution, nên container node-container phải dùng `host.docker.internal` để gọi mongodb trên host.
+  async function deleteGoalHandler(goalId) {
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://localhost:80/goals/' + goalId, { method: 'DELETE' });
+      const resData = await response.json();
+      if (!response.ok) throw new Error(resData.message || 'Deleting failed.');
+      setLoadedGoals((prevGoals) => prevGoals.filter((goal) => goal.id !== goalId));
+    } catch (err) {
+      setError(err.message || 'Deleting failed.');
+    }
+    setIsLoading(false);
+  }
+
+  return (
+    <div>
+      {error && <ErrorAlert errorText={error} />}
+      <GoalInput onAddGoal={addGoalHandler} />
+      {!isLoading && <CourseGoals goals={loadedGoals} onDeleteGoal={deleteGoalHandler} />}
+    </div>
+  );
+}
+
+export default App;
+```
+
+**File .dockerignore (giống backend):**
+
+```
+node_modules
+Dockerfile
+.git
+```
+
+**File Dockerfile:**
+
+```
+FROM node:20
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+**Build và Chạy Container**
+
+```
+docker build -t reactjs-frontend:image .
+docker run --name reactjs-container --rm -p 3000:3000 -d -v /app/node_modules -v "D:\Workspace for Learning\My Projects\Learn Technology\Docker-and-Kubernetes\Multi-Container Application\frontend\src:/app/src" reactjs-frontend:image
+```
+
+**Giải thích:**
+
+- `-p 3000:3000`: Ánh xạ cổng 3000 để host truy cập frontend qua localhost:3000.
+
+- `-v /app/node_modules`: Anonymous volume bảo vệ thư mục node_modules.
+
+- `-v "D:\...\frontend\src:/app/src"`: Bind mount ánh xạ thư mục nguồn từ host để cập nhật code trực tiếp.
+
+**Tại sao không dùng network?** 
+
+- Container reactjs-container chỉ phục vụ file tĩnh (HTML, JS) cho trình duyệt trên host. 
+
+- `fetch('http://localhost:80/goals')` chạy trên trình duyệt (host), gọi container nodejs-container qua localhost:80 (ánh xạ cổng), nên không cần network để giao tiếp container với container.
+
+> Lưu ý: React tự động restart khi thay đổi file (qua npm start), không cần dịch vụ như nodemon.
 
 ---
 
 ## 🔍 Cách Container Tương Tác và Với Host Machine
 
-- **Container mongodb ↔ Container node-container:** Container node-container gọi container mongodb qua `host.docker.internal:27017` (cổng host ánh xạ từ mongodb).
+- **Container mongodb ↔ Container nodejs-container:** Container nodejs-container gọi mongodb:27017 qua network my-network.
 
-- **Container node-container ↔ Host:** Host gọi API của container node-container qua `localhost:80` (ánh xạ cổng).
+- **Container nodejs-container ↔ Host:** Host truy cập API qua localhost:80 (ánh xạ cổng).
 
-- **Container react-container ↔ Host ↔ Container node-container:** Container react-container phục vụ file JavaScript cho trình duyệt (host) qua `localhost:3000`. Trình duyệt thực thi fetch để gọi API từ container node-container qua `localhost:80`.
+- **Container reactjs-container ↔ Host ↔ Container nodejs-container:** Container reactjs-container phục vụ file cho trình duyệt (host) qua localhost:3000. Trình duyệt thực thi fetch gọi localhost:80 (container nodejs-container).
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Container mongodb: Chạy trên host (localhost:27017) qua -p.
+✅ Network: my-network cho phép gọi qua tên (ví dụ: mongodb).
 
-✅ Container node-container: Dùng host.docker.internal:27017 gọi mongodb, phục vụ API tại localhost:80.
+✅ Container mongodb: Dùng named volume data để lưu dữ liệu.
 
-✅ Container react-container: Phục vụ file cho trình duyệt tại localhost:3000, fetch chạy trên host gọi node-container.
+✅ Container nodejs-container: Sử dụng bind mount, network để tối ưu.
 
-✅ Networking: fetch chạy trên trình duyệt (host), gọi localhost:80 (container node-container).
+✅ Container reactjs-container: Dùng bind mount, không cần network, fetch chạy trên host.
+
+✅ Đồng bộ file WSL 2: Nếu gặp vấn đề đồng bộ file trên Windows với WSL 2, tham khảo hướng dẫn khắc phục.
 
 ---
 
-### 🚀 Hiểu rõ container và host tương tác để triển khai hiệu quả!
+### 🚀 Tối ưu container với network và volume để triển khai hiệu quả!
