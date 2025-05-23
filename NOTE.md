@@ -1,52 +1,51 @@
-# 📝 How Docker Resolves IP Addresses?
+# 📝 Types of Drivers in Docker Networks
 
 ## 📌 Tổng Quan
 
-🌐 Docker quản lý IP addresses trong container thông qua mạng nội bộ (networking).  
-
-> Docker không thay đổi source code của ứng dụng mà chỉ kiểm soát môi trường chạy, bao gồm việc gán và phân giải IP.
+🌐 `Docker Networks` hỗ trợ nhiều loại driver, ảnh hưởng đến cách các container giao tiếp. Driver mặc định là **bridge**, cho phép container tìm nhau qua tên trong cùng mạng. Bạn có thể chọn driver khi tạo mạng bằng tùy chọn `--driver`.
 
 ---
 
-## 🚀 Cách Docker Phân Giải IP Addresses
+## 🚀 Các Loại Driver
 
-### 1️⃣ Gán IP Tự Động
+### 1️⃣ Bridge (Mặc Định)
 
-- Docker tự động gán IP cho container khi chạy trong một network (ví dụ: bridge hoặc user-defined).
+- **Mô tả:** Driver mặc định, cho phép container trong cùng mạng tìm nhau qua tên.
 
-- **Kiểm tra IP:**
+- **Tạo mạng:**
+
   ```
-  docker container inspect <container-name>
+  docker network create --driver bridge my-net
   ```
 
-- **Kết quả:** Tìm IPAddress trong NetworkSettings, ví dụ: `172.17.0.2`.
+- Nếu dùng bridge, có thể bỏ `--driver` vì nó là mặc định.
 
 ---
 
-### 2️⃣ Phân Giải Tên Sang IP
+### 2️⃣ Các Driver Khác
 
-- Trong user-defined network, Docker sử dụng DNS resolution để ánh xạ tên container sang IP.
+- **host:** Loại bỏ sự cô lập giữa container và host, dùng chung localhost. Phù hợp cho container độc lập.
 
-- Ví dụ: Container web gọi db qua tên, Docker tự động phân giải `db` thành IP tương ứng.
+- **overlay:** Kết nối nhiều Docker daemon (trên các máy khác nhau), chỉ hoạt động trong Swarm mode (hiện gần như lỗi thời).
 
----
+- **macvlan:** Gán địa chỉ MAC tùy chỉnh cho container, dùng để giao tiếp qua MAC.
 
-### 3️⃣ Không Thay Đổi Source Code
+- **none:** Vô hiệu hóa toàn bộ networking.
 
-- Docker chỉ kiểm soát môi trường (network, runtime) và không sửa đổi source code của ứng dụng.
+- **Third-party plugins:** Cài plugin bên thứ ba để thêm tính năng tùy chỉnh.
 
-- Ứng dụng (như app.js) dùng IP hoặc tên container mà Docker cung cấp.
+> 💡 **Lưu ý:** Driver bridge thường phù hợp nhất cho hầu hết các trường hợp.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Gán IP: Docker tự động gán IP cho container trong network.
+✅ Bridge: Driver mặc định, hỗ trợ tìm container qua tên.
 
-✅ DNS Resolution: User-defined network phân giải tên thành IP.
+✅ Các driver khác: host (chung localhost), overlay (Swarm), macvlan (MAC tùy chỉnh), none (tắt mạng), plugins (tùy chỉnh).
 
-✅ Không thay đổi code: Docker chỉ quản lý môi trường, không chỉnh sửa source code.
+✅ Khuyến nghị: Dùng bridge cho đa số tình huống.
 
 ---
 
-### 🚀 Hiểu cách Docker quản lý IP để tối ưu kết nối container!
+### 🚀 Chọn driver phù hợp để tối ưu hóa mạng Docker!
