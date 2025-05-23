@@ -257,6 +257,8 @@ docker run --name reactjs-container --rm -p 3000:3000 -d -v /app/node_modules -v
 
 - **Container reactjs-container ↔ Host ↔ Container nodejs-container:** Container reactjs-container phục vụ file cho trình duyệt (host) qua localhost:3000. Trình duyệt thực thi fetch gọi localhost:80 (container nodejs-container).
 
+> Lưu ý: Nếu gặp vấn đề đồng bộ file trên Windows với WSL 2, tham khảo hướng dẫn khắc phục tại: https://devblogs.microsoft.com/commandline/access-linux-filesystems-in-windows-and-wsl-2/
+
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
@@ -268,8 +270,6 @@ docker run --name reactjs-container --rm -p 3000:3000 -d -v /app/node_modules -v
 ✅ Container nodejs-container: Sử dụng bind mount, network để tối ưu.
 
 ✅ Container reactjs-container: Dùng bind mount, không cần network, fetch chạy trên host.
-
-✅ Đồng bộ file WSL 2: Nếu gặp vấn đề đồng bộ file trên Windows với WSL 2, tham khảo hướng dẫn khắc phục.
 
 ---
 
