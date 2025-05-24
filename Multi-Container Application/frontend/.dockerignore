@@ -1,7 +1,3 @@
 node_modules
-
-Dockerfile
-
-.env
-
 .git
+Dockerfile

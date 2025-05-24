@@ -5,7 +5,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
-require('dotenv').config();
 
 const Goal = require('./models/goal');
 
@@ -84,13 +83,19 @@ app.delete('/goals/:id', async (req, res) => {
   }
 });
 
-mongoose
-  .connect(`mongodb://mongodb:27017/course-goals?authSource=admin`)
-  .then(() => {
-    console.log('CONNECTED TO MONGODB');
-    app.listen(80);
-  })
-  .catch((err) => {
-    console.error('FAILED TO CONNECT TO MONGODB');
-    console.error(err);
-  });
+mongoose.connect(
+  `mongodb://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@mongodb:27017/course-goals?authSource=admin`,
+  {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  },
+  (err) => {
+    if (err) {
+      console.error('FAILED TO CONNECT TO MONGODB');
+      console.error(err);
+    } else {
+      console.log('CONNECTED TO MONGODB!!');
+      app.listen(80);
+    }
+  }
+);

@@ -1,166 +1,69 @@
-# 📝 Creating a Compose File & Diving into the Compose File Configuration
+# 📝 Docker Compose Up & Down
 
 ## 📌 Tổng Quan
 
-📝 `Docker Compose` sử dụng file `docker-compose.yaml` để định nghĩa và chạy nhiều container. File YAML yêu cầu thụt lề chính xác để thể hiện phụ thuộc giữa các cấp cấu hình, bao gồm top-level elements như version, name, services, volumes, networks.
+⚙️ `Docker Compose` cung cấp hai lệnh chính: `docker compose up` để khởi động ứng dụng và `docker compose down` để dừng và dọn dẹp tài nguyên, với các tùy chọn phổ biến giúp quản lý container, volume, network hiệu quả, theo tài liệu chính thức.
 
 ---
 
-## 🚀 Cấu Hình File docker-compose.yaml
+## 🚀 Lệnh docker compose up
 
-### 1️⃣ Top-Level Elements: version và name
+**Chức năng:** Khởi động tất cả services được định nghĩa trong `docker-compose.yaml`, tự động tạo network và volume nếu cần.
 
-- **version (Obsolete):** Trước đây dùng để chỉ định phiên bản `Compose Specification`, nhưng theo tài liệu 2025, nó chỉ mang tính thông tin và đã lỗi thời. Compose tự động chọn schema mới nhất để validate file, cảnh báo nếu có trường không nhận diện được.
+**Tùy chọn phổ biến:**
+
+  - **-d (detached):** Chạy container ở chế độ nền, không chiếm terminal. Ví dụ:
+
+    ```
+    docker compose up -d
+    ```
+
+  - **--build:** Build lại images từ Dockerfile trước khi khởi động, đảm bảo dùng phiên bản mới nhất. Ví dụ:
+
+    ```
+    docker compose up --build
+    ```
+
+  - **--scale <service>=<num>:** Điều chỉnh số lượng instance của service (phổ biến cho load balancing). Ví dụ:
+
+    ```
+    docker compose up --scale web=3
+    ```
+
+---
+
+## 🔍 Lệnh docker compose down
+
+**Chức năng mặc định:** Dừng và xóa tất cả container được quản lý bởi file Compose, xóa network do Compose tạo, giữ lại volumes và images.
+
+**Network:** Xóa user-defined network do Compose tự động tạo (ví dụ: my-network), nhưng không ảnh hưởng đến default bridge network.
+
+**Volumes:** Không xóa theo mặc định, nhưng thêm `-v` sẽ xóa toàn bộ volumes được khai báo trong file.
+
+**Tùy chọn phổ biến:**
+
+  - **-v, --volumes:** Xóa tất cả volumes được định nghĩa trong file `docker-compose.yaml` sau khi dừng container. Ví dụ:
+
+    ```
+    docker compose down -v
+    ```
+
+  - **--rmi <type>:** Xóa images liên quan (phổ biến với local cho custom images). Ví dụ:
   
-  ```
-  version: "3.9"  # Cảnh báo: obsolete
-  ```
-
-- **name:** Định nghĩa tên dự án, dùng nếu không override thủ công. Được truy xuất qua biến môi trường `COMPOSE_PROJECT_NAME`.
-
-  ```yaml
-  name: myapp
-  services:
-    foo:
-      image: busybox
-      command: echo "I'm running ${COMPOSE_PROJECT_NAME}"
-  ```
-
-> 📚 Tham khảo thêm tại: https://docs.docker.com/reference/compose-file/version-and-name/
-
----
-
-### 2️⃣ Cấu Trúc Cơ Bản & Thụt Lề
-
-**Thụt lề:** 2 khoảng trắng mỗi cấp, ví dụ:
-
-  ```yaml
-  name: myapp
-  services:
-    mongodb:  # Cấp 1
-      image: mongo  # Cấp 2
-  ```
-
-**Cấp phụ thuộc:**
-
-  - `services`: Cấp 1, chứa các container.
-
-  - `mongodb`: Cấp 2, tên service (container).
-
-  - `image`, `environment`: Cấp 3, thuộc tính của service.
-
----
-
-### 3️⃣ Biến Môi Trường
-
-- **Cách 1: Dùng environment:**
-
-  ```yaml
-  services:
-    mongodb:
-      image: mongo
-      environment:
-        MONGO_INITDB_ROOT_USERNAME: thuanflu
-        MONGO_INITDB_ROOT_PASSWORD: mySecretPassword
-  ```
-
-- **Cách 2: Dùng env_file:**
-
-  ```yaml
-  services:
-    mongodb:
-      image: mongo
-      env_file:
-        - ./env/mongo.env
-  ```
-
-  **Giải thích env_file:** Trỏ đến thư mục `env` chứa file `mongo.env` có  
-
-  ```
-  MONGO_INITDB_ROOT_USERNAME=thuanflu
-  MONGO_INITDB_ROOT_PASSWORD=mySecretPassword
-  ```
-
----
-
-### 4️⃣ Network
-
-- **Mặc định:** Docker Compose tự động tạo một user-defined bridge network cho tất cả services, hỗ trợ DNS resolution.
-
-- **Tùy chỉnh:**
-
-  ```yaml
-  services:
-    mongodb:
-      image: mongo
-      networks:
-        - my-network
-  ```
-
----
-
-### 5️⃣ Image
-
-**Nguồn image:**
-
-  - `image: mongo`: Image từ Docker Hub.
-
-  - `image: my-custom-app`: Custom image (phải build từ Dockerfile trước).
-
----
-
-### 6️⃣ Volumes
-
-- **Cú pháp trong services:**
-
-  ```yaml
-  services:
-    mongodb:
-      image: mongo
-      volumes:
-        - mongo-data:/data/db  # Named Volume
-        - /data/temp           # Anonymous Volume
-        - ./mongo-data:/data/db  # Bind Mount
-  ```
-
-- **Khai báo top-level volumes (chỉ áp dụng cho Named Volume):**
-
-  ```yaml
-  volumes:
-    mongo-data:
-  ```
-
----
-
-### 7️⃣ Các Tag -p, --rm, -d
-
-- **-p (ports):**
-  ```yaml
-  services:
-    mongodb:
-      image: mongo
-      ports:
-        - "27017:27017"
-  ```
-
-- **-d (detached mode):** Dùng lệnh `docker compose up -d`.
-
-- **--rm (auto-remove):** Dùng lệnh `docker compose up --rm`.
+    ```
+    docker compose down --rmi local
+    ```
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ File YAML: Thụt lề 2 khoảng trắng, có version, name, services.
+✅ up: Khởi động với -d (nền), --build (build lại), --scale (scale service).
 
-✅ Biến môi trường: environment hoặc env_file.
+✅ down: Xóa container, network (trừ default bridge), giữ volumes (xóa với -v).
 
-✅ Network: Mặc định tự tạo, tùy chỉnh nếu cần.
-
-✅ Volumes: Cú pháp - <name>:/path, /path, hoặc ./path:/path.
-
-✅ Cổng: Dùng ports, các tag như --rm, -d qua lệnh.
+✅ Tùy chọn down: -v (xóa volumes), --rmi local (xóa images custom).
 
 ---
 
-### 🚀 Tạo file Compose chuẩn để quản lý ứng dụng hiệu quả!
+### 🚀 Quản lý ứng dụng dễ dàng với Compose Up & Down!
