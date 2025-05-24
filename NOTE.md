@@ -1,69 +1,155 @@
-# 📝 Docker Compose Up & Down
+# 📝 Working with Multiple Containers
 
 ## 📌 Tổng Quan
 
-⚙️ `Docker Compose` cung cấp hai lệnh chính: `docker compose up` để khởi động ứng dụng và `docker compose down` để dừng và dọn dẹp tài nguyên, với các tùy chọn phổ biến giúp quản lý container, volume, network hiệu quả, theo tài liệu chính thức.
+🧩 `Docker Compose` quản lý nhiều container qua file `docker-compose.yaml`, hỗ trợ kết nối network, tùy chỉnh build, ports, volumes, và phụ thuộc giữa services.
 
 ---
 
-## 🚀 Lệnh docker compose up
+## 🔗 Tên Container và Kết Nối Network
 
-**Chức năng:** Khởi động tất cả services được định nghĩa trong `docker-compose.yaml`, tự động tạo network và volume nếu cần.
+- Docker Compose tự động tạo tên container theo mẫu `<project-name>_<service-name>_<index>` (ví dụ: `multi-container-app_mongodb_1`), kiểm tra bằng `docker ps`.
 
-**Tùy chọn phổ biến:**
-
-  - **-d (detached):** Chạy container ở chế độ nền, không chiếm terminal. Ví dụ:
-
-    ```
-    docker compose up -d
-    ```
-
-  - **--build:** Build lại images từ Dockerfile trước khi khởi động, đảm bảo dùng phiên bản mới nhất. Ví dụ:
-
-    ```
-    docker compose up --build
-    ```
-
-  - **--scale <service>=<num>:** Điều chỉnh số lượng instance của service (phổ biến cho load balancing). Ví dụ:
-
-    ```
-    docker compose up --scale web=3
-    ```
+- Trong network mặc định (user-defined bridge), các service gọi nhau bằng tên khai báo trong file (như `mongodb`, `backend`), nhờ tính năng DNS resolution.
 
 ---
 
-## 🔍 Lệnh docker compose down
+## ⚙️ Cấu Hình build
 
-**Chức năng mặc định:** Dừng và xóa tất cả container được quản lý bởi file Compose, xóa network do Compose tạo, giữ lại volumes và images.
+- **Cách 1 (ngắn gọn):** `build: <path>` – dùng khi không cần đổi tên file Dockerfile hoặc thêm args.
 
-**Network:** Xóa user-defined network do Compose tự động tạo (ví dụ: my-network), nhưng không ảnh hưởng đến default bridge network.
+  ```
+  build: ./backend
+  ```
 
-**Volumes:** Không xóa theo mặc định, nhưng thêm `-v` sẽ xóa toàn bộ volumes được khai báo trong file.
+- **Cách 2 (chi tiết):** Khi cần đổi tên Dockerfile hoặc thêm build-time variables.
 
-**Tùy chọn phổ biến:**
+  ```yaml
+  build:
+    context: ./backend  # Thư mục chứa Dockerfile
+    dockerfile: CustomDockerfile  # Tên file tùy chỉnh
+    args:  # Biến build-time
+      build_arg: value
+  ```
 
-  - **-v, --volumes:** Xóa tất cả volumes được định nghĩa trong file `docker-compose.yaml` sau khi dừng container. Ví dụ:
+- **Mục đích:** Build custom image từ thư mục hoặc file Dockerfile.
 
-    ```
-    docker compose down -v
-    ```
+---
 
-  - **--rmi <type>:** Xóa images liên quan (phổ biến với local cho custom images). Ví dụ:
-  
-    ```
-    docker compose down --rmi local
-    ```
+## 🌐 Cấu Hình ports
+
+- **Cú pháp:** `- '<host-port>:<container-port>'` (ví dụ: `- '80:80'`).
+
+- **Chi tiết:** Ánh xạ cổng host sang container, hỗ trợ cả TCP/UDP.
+
+- **Ví dụ:** `- '80:80/tcp'` hoặc `- '8080:80/udp'`.
+
+---
+
+## 💾 Cấu Hình volumes
+
+- **Cú pháp:** `- <source>:<destination>`
+
+- **Named Volume:** `- data:/data/db`
+
+- **Anonymous Volume:** `- /data/temp`
+
+- **Bind Mount:** `- ./host-path:/container-path`
+
+- **Mục đích:** Lưu dữ liệu vĩnh viễn hoặc ánh xạ thư mục host.
+
+---
+
+## 🔗 Cấu Hình depends_on
+
+- **Cú pháp:** `- <service-name>` (ví dụ: `- mongodb`)
+
+- **Chi tiết:** Đảm bảo service được khởi động trước, nhưng không chờ sẵn sàng (cần healthcheck nếu cần).
+
+- **Ví dụ:** `- backend` đảm bảo backend chạy trước frontend.
+
+---
+
+## 🖥️ Cấu Hình stdin_open và tty
+
+- `stdin_open: true`: Giữ stdin mở, tương đương `-i` trong docker run, cho phép nhập liệu.
+
+- `tty: true`: Tạo terminal (TTY), tương đương `-t`, hỗ trợ giao diện tương tác.
+
+- **Kết hợp:** Thay thế `--it` trong docker run, dùng cho debugging hoặc chạy shell.
+
+---
+
+## 📄 File docker-compose.yaml Đầy Đủ
+
+```yaml
+name: multi-container-app
+services:
+  mongodb:
+    image: mongo
+    volumes:
+      - data:/data/db
+    env_file:
+      - ./env/mongo.env
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        build_arg: value
+    ports:
+      - '80:80'
+    volumes:
+      - node-logs:/app/logs
+      - /app/node_modules
+      - ./backend:/app
+    env_file:
+      - ./env/backend.env
+    depends_on:
+      - mongodb
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./frontend/src:/app/src
+    stdin_open: true
+    tty: true
+    depends_on:
+      - backend
+volumes:
+  data:
+  node-logs:
+```
+
+---
+
+## ⚠️ Lưu Ý Quan Trọng
+
+❗ Tên container tự động sinh, dùng tên service trong network.
+
+❗ build cần context và dockerfile chính xác nếu dùng cú pháp chi tiết.
+
+❗ depends_on không đảm bảo service sẵn sàng, kết hợp healthcheck nếu cần.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ up: Khởi động với -d (nền), --build (build lại), --scale (scale service).
+✅ Tên container tự sinh, gọi qua tên service trong network.
 
-✅ down: Xóa container, network (trừ default bridge), giữ volumes (xóa với -v).
+✅ build: <path> hoặc context, dockerfile, args.
 
-✅ Tùy chọn down: -v (xóa volumes), --rmi local (xóa images custom).
+✅ ports: <host>:<container>.
+
+✅ volumes: <source>:<dest>.
+
+✅ depends_on: - <service>.
+
+✅ stdin_open + tty: Thay --it.
 
 ---
 
-### 🚀 Quản lý ứng dụng dễ dàng với Compose Up & Down!
+### 🚀 Quản lý nhiều container hiệu quả với Compose!
