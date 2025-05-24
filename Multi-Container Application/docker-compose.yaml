@@ -4,8 +4,11 @@ services:
   mongodb:
     image: mongo
     volumes:
-      - data: /data/db
+      - data:/data/db
     env_file:
       - ./env/mongo.env
     # networks:
     #   - my-network
+
+volumes:
+  data:
