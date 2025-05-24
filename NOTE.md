@@ -1,82 +1,166 @@
-# 📝 Docker Compose: What & Why?
+# 📝 Creating a Compose File & Diving into the Compose File Configuration
 
 ## 📌 Tổng Quan
 
-🛠️ `Docker Compose` là công cụ chính thức của Docker để định nghĩa và chạy nhiều container như một ứng dụng qua file YAML (thường là `docker-compose.yml`). Nó quản lý services, ports, environment variables, volumes, và networks, nhưng có những giới hạn nhất định.
+📝 `Docker Compose` sử dụng file `docker-compose.yaml` để định nghĩa và chạy nhiều container. File YAML yêu cầu thụt lề chính xác để thể hiện phụ thuộc giữa các cấp cấu hình, bao gồm top-level elements như version, name, services, volumes, networks.
 
 ---
 
-## 🚀 Docker Compose Là Gì & Tại Sao Dùng?
+## 🚀 Cấu Hình File docker-compose.yaml
 
-### 1️⃣ Định Nghĩa Ứng Dụng Nhiều Container
+### 1️⃣ Top-Level Elements: version và name
 
-**Chức năng:** Định nghĩa services (containers), published ports, environment variables, volumes, và networks trong một file.
-
-**Ví dụ file docker-compose.yml:**
-
-  ```yaml
-  version: "3.9"
-  services:
-    web:
-      image: nginx
-      ports:
-        - "8080:80"
-      environment:
-        - ENV_VAR=value
-      volumes:
-        - my-volume:/app
-      networks:
-        - my-network
-  volumes:
-    my-volume:
-  networks:
-    my-network:
+- **version (Obsolete):** Trước đây dùng để chỉ định phiên bản `Compose Specification`, nhưng theo tài liệu 2025, nó chỉ mang tính thông tin và đã lỗi thời. Compose tự động chọn schema mới nhất để validate file, cảnh báo nếu có trường không nhận diện được.
+  
+  ```
+  version: "3.9"  # Cảnh báo: obsolete
   ```
 
-**Cấu trúc:**
+- **name:** Định nghĩa tên dự án, dùng nếu không override thủ công. Được truy xuất qua biến môi trường `COMPOSE_PROJECT_NAME`.
 
-  - **Services (Containers):** Định nghĩa container (ví dụ: web, db).
+  ```yaml
+  name: myapp
+  services:
+    foo:
+      image: busybox
+      command: echo "I'm running ${COMPOSE_PROJECT_NAME}"
+  ```
 
-  - **Published Ports:** Ánh xạ cổng (ví dụ: 8080:80).
-
-  - **Environment Variables:** Cấu hình biến môi trường.
-
-  - **Volumes:** Lưu trữ dữ liệu vĩnh viễn.
-
-  - **Networks:** Kết nối giữa services.
-
----
-
-### 2️⃣ Lý Do Sử Dùng
-
-- **Tiện lợi:** Khởi động, dừng toàn bộ ứng dụng bằng một lệnh: `docker compose up`.
-
-- **Hiệu quả:** Quản lý phụ thuộc (như app và database) và cấu hình mạng/volume dễ dàng.
-
-- **Tái sử dụng:** File YAML có thể triển khai trên nhiều môi trường.
+> 📚 Tham khảo thêm tại: https://docs.docker.com/reference/compose-file/version-and-name/
 
 ---
 
-## ⚠️ Lưu Ý Quan Trọng
+### 2️⃣ Cấu Trúc Cơ Bản & Thụt Lề
 
-❌ Không thay thế Dockerfile: Vẫn cần Dockerfile để xây custom images.
+**Thụt lề:** 2 khoảng trắng mỗi cấp, ví dụ:
 
-❌ Không thay thế images/containers: Chỉ quản lý, không tạo mới images/containers.
+  ```yaml
+  name: myapp
+  services:
+    mongodb:  # Cấp 1
+      image: mongo  # Cấp 2
+  ```
 
-❌ Không phù hợp đa host: Không thiết kế để quản lý nhiều container trên các máy chủ khác nhau (sử dụng Kubernetes cho trường hợp này).
+**Cấp phụ thuộc:**
+
+  - `services`: Cấp 1, chứa các container.
+
+  - `mongodb`: Cấp 2, tên service (container).
+
+  - `image`, `environment`: Cấp 3, thuộc tính của service.
+
+---
+
+### 3️⃣ Biến Môi Trường
+
+- **Cách 1: Dùng environment:**
+
+  ```yaml
+  services:
+    mongodb:
+      image: mongo
+      environment:
+        MONGO_INITDB_ROOT_USERNAME: thuanflu
+        MONGO_INITDB_ROOT_PASSWORD: mySecretPassword
+  ```
+
+- **Cách 2: Dùng env_file:**
+
+  ```yaml
+  services:
+    mongodb:
+      image: mongo
+      env_file:
+        - ./env/mongo.env
+  ```
+
+  **Giải thích env_file:** Trỏ đến thư mục `env` chứa file `mongo.env` có  
+
+  ```
+  MONGO_INITDB_ROOT_USERNAME=thuanflu
+  MONGO_INITDB_ROOT_PASSWORD=mySecretPassword
+  ```
+
+---
+
+### 4️⃣ Network
+
+- **Mặc định:** Docker Compose tự động tạo một user-defined bridge network cho tất cả services, hỗ trợ DNS resolution.
+
+- **Tùy chỉnh:**
+
+  ```yaml
+  services:
+    mongodb:
+      image: mongo
+      networks:
+        - my-network
+  ```
+
+---
+
+### 5️⃣ Image
+
+**Nguồn image:**
+
+  - `image: mongo`: Image từ Docker Hub.
+
+  - `image: my-custom-app`: Custom image (phải build từ Dockerfile trước).
+
+---
+
+### 6️⃣ Volumes
+
+- **Cú pháp trong services:**
+
+  ```yaml
+  services:
+    mongodb:
+      image: mongo
+      volumes:
+        - mongo-data:/data/db  # Named Volume
+        - /data/temp           # Anonymous Volume
+        - ./mongo-data:/data/db  # Bind Mount
+  ```
+
+- **Khai báo top-level volumes (chỉ áp dụng cho Named Volume):**
+
+  ```yaml
+  volumes:
+    mongo-data:
+  ```
+
+---
+
+### 7️⃣ Các Tag -p, --rm, -d
+
+- **-p (ports):**
+  ```yaml
+  services:
+    mongodb:
+      image: mongo
+      ports:
+        - "27017:27017"
+  ```
+
+- **-d (detached mode):** Dùng lệnh `docker compose up -d`.
+
+- **--rm (auto-remove):** Dùng lệnh `docker compose up --rm`.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Docker Compose: Quản lý services, ports, env, volumes, networks qua file YAML.
+✅ File YAML: Thụt lề 2 khoảng trắng, có version, name, services.
 
-✅ Tại sao dùng: Khởi động dễ, quản lý phụ thuộc, tái sử dụng.
+✅ Biến môi trường: environment hoặc env_file.
 
-✅ Lưu ý: Không thay thế Dockerfile, images/containers, hoặc multi-host.
+✅ Network: Mặc định tự tạo, tùy chỉnh nếu cần.
 
-✅ Lưu ý: Dùng đúng phiên bản, kiểm tra depends_on, phù hợp dev/test.
+✅ Volumes: Cú pháp - <name>:/path, /path, hoặc ./path:/path.
+
+✅ Cổng: Dùng ports, các tag như --rm, -d qua lệnh.
 
 ---
 
-### 🚀 Dễ dàng triển khai ứng dụng với Docker Compose!
+### 🚀 Tạo file Compose chuẩn để quản lý ứng dụng hiệu quả!

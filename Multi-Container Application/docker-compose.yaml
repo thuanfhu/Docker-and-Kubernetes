@@ -1,0 +1,11 @@
+name: multi-container-app
+
+services:
+  mongodb:
+    image: mongo
+    volumes:
+      - data: /data/db
+    env_file:
+      - ./env/mongo.env
+    # networks:
+    #   - my-network
