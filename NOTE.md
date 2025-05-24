@@ -140,15 +140,15 @@ volumes:
 
 ✅ Tên container tự sinh, gọi qua tên service trong network.
 
-✅ build: <path> hoặc context, dockerfile, args.
+✅ build: `<path>` hoặc `context, dockerfile, args`.
 
-✅ ports: <host>:<container>.
+✅ ports: `<host>:<container>`.
 
-✅ volumes: <source>:<dest>.
+✅ volumes: `<source>:<dest>`.
 
-✅ depends_on: - <service>.
+✅ depends_on: `- <service>`.
 
-✅ stdin_open + tty: Thay --it.
+✅ stdin_open + tty: Thay `--it`.
 
 ---
 
