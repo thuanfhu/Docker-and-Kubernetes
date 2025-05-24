@@ -1,155 +1,78 @@
-# 📝 Working with Multiple Containers
+# 📝 Building Images & Understanding Container Names
 
 ## 📌 Tổng Quan
 
-🧩 `Docker Compose` quản lý nhiều container qua file `docker-compose.yaml`, hỗ trợ kết nối network, tùy chỉnh build, ports, volumes, và phụ thuộc giữa services.
+🛠️ `Docker Compose` hỗ trợ build image và quản lý container với tên tự động hoặc tùy chỉnh, giúp triển khai ứng dụng hiệu quả.
 
 ---
 
-## 🔗 Tên Container và Kết Nối Network
+## 🔨 Building Images với `docker compose up --build`
 
-- Docker Compose tự động tạo tên container theo mẫu `<project-name>_<service-name>_<index>` (ví dụ: `multi-container-app_mongodb_1`), kiểm tra bằng `docker ps`.
+- **Chức năng:** `docker compose up --build` khởi động services và build lại image nếu được khai báo trong file `docker-compose.yaml`.
 
-- Trong network mặc định (user-defined bridge), các service gọi nhau bằng tên khai báo trong file (như `mongodb`, `backend`), nhờ tính năng DNS resolution.
+- **Khi nào dùng:** Khi source code thay đổi (ví dụ: chỉnh sửa file trong thư mục `build: ./backend`), image cần được build lại để phản ánh thay đổi. Nếu không dùng `--build`, Compose sẽ dùng image cũ, không áp dụng thay đổi.
 
----
-
-## ⚙️ Cấu Hình build
-
-- **Cách 1 (ngắn gọn):** `build: <path>` – dùng khi không cần đổi tên file Dockerfile hoặc thêm args.
-
-  ```
-  build: ./backend
-  ```
-
-- **Cách 2 (chi tiết):** Khi cần đổi tên Dockerfile hoặc thêm build-time variables.
+- **Ví dụ:**
 
   ```yaml
-  build:
-    context: ./backend  # Thư mục chứa Dockerfile
-    dockerfile: CustomDockerfile  # Tên file tùy chỉnh
-    args:  # Biến build-time
-      build_arg: value
+  services:
+    backend:
+      build: ./backend
   ```
 
-- **Mục đích:** Build custom image từ thư mục hoặc file Dockerfile.
+- **Chạy:**
+
+  ```
+  docker compose up --build
+  ```
+
+  → Build lại image từ thư mục `./backend`, sau đó chạy container.
 
 ---
 
-## 🌐 Cấu Hình ports
+## 🏷️ Quy Ước Tên Container
 
-- **Cú pháp:** `- '<host-port>:<container-port>'` (ví dụ: `- '80:80'`).
+- **Tự động:** Docker Compose đặt tên container theo mẫu `<project-name>_<service-name>_<index>` (ví dụ: `myapp_backend_1` nếu project là myapp, service là backend).
 
-- **Chi tiết:** Ánh xạ cổng host sang container, hỗ trợ cả TCP/UDP.
+- **Tùy chỉnh:** Dùng `container_name: <name>` để đặt tên thủ công.
 
-- **Ví dụ:** `- '80:80/tcp'` hoặc `- '8080:80/udp'`.
+- **Ví dụ:**
 
----
+  ```yaml
+  services:
+    backend:
+      build: ./backend
+      container_name: custom-backend
+  ```
 
-## 💾 Cấu Hình volumes
+  → Container sẽ có tên chính xác là `custom-backend`.
 
-- **Cú pháp:** `- <source>:<destination>`
+- **Kiểm tra:**
 
-- **Named Volume:** `- data:/data/db`
-
-- **Anonymous Volume:** `- /data/temp`
-
-- **Bind Mount:** `- ./host-path:/container-path`
-
-- **Mục đích:** Lưu dữ liệu vĩnh viễn hoặc ánh xạ thư mục host.
-
----
-
-## 🔗 Cấu Hình depends_on
-
-- **Cú pháp:** `- <service-name>` (ví dụ: `- mongodb`)
-
-- **Chi tiết:** Đảm bảo service được khởi động trước, nhưng không chờ sẵn sàng (cần healthcheck nếu cần).
-
-- **Ví dụ:** `- backend` đảm bảo backend chạy trước frontend.
-
----
-
-## 🖥️ Cấu Hình stdin_open và tty
-
-- `stdin_open: true`: Giữ stdin mở, tương đương `-i` trong docker run, cho phép nhập liệu.
-
-- `tty: true`: Tạo terminal (TTY), tương đương `-t`, hỗ trợ giao diện tương tác.
-
-- **Kết hợp:** Thay thế `--it` trong docker run, dùng cho debugging hoặc chạy shell.
-
----
-
-## 📄 File docker-compose.yaml Đầy Đủ
-
-```yaml
-name: multi-container-app
-services:
-  mongodb:
-    image: mongo
-    volumes:
-      - data:/data/db
-    env_file:
-      - ./env/mongo.env
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-        build_arg: value
-    ports:
-      - '80:80'
-    volumes:
-      - node-logs:/app/logs
-      - /app/node_modules
-      - ./backend:/app
-    env_file:
-      - ./env/backend.env
-    depends_on:
-      - mongodb
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - '3000:3000'
-    volumes:
-      - ./frontend/src:/app/src
-    stdin_open: true
-    tty: true
-    depends_on:
-      - backend
-volumes:
-  data:
-  node-logs:
-```
+  ```
+  docker ps
+  ```
 
 ---
 
 ## ⚠️ Lưu Ý Quan Trọng
 
-❗ Tên container tự động sinh, dùng tên service trong network.
+❗ `--build` cần thiết khi source code thay đổi, nếu không container sẽ chạy image cũ.
 
-❗ build cần context và dockerfile chính xác nếu dùng cú pháp chi tiết.
+❗ `container_name` phải duy nhất, không trùng với container khác.
 
-❗ depends_on không đảm bảo service sẵn sàng, kết hợp healthcheck nếu cần.
+❗ Tên tự động tiện cho quản lý mặc định, nhưng `container_name` hữu ích khi cần tên cố định (ví dụ: để gọi trong script).
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Tên container tự sinh, gọi qua tên service trong network.
+✅ `docker compose up --build`: Build lại image khi source code thay đổi.
 
-✅ build: `<path>` hoặc `context, dockerfile, args`.
+✅ Tên container: Tự động `<project>_<service>_<index>` hoặc tùy chỉnh với `container_name`.
 
-✅ ports: `<host>:<container>`.
-
-✅ volumes: `<source>:<dest>`.
-
-✅ depends_on: `- <service>`.
-
-✅ stdin_open + tty: Thay `--it`.
+✅ Kiểm tra tên bằng `docker ps`.
 
 ---
 
-### 🚀 Quản lý nhiều container hiệu quả với Compose!
+### 🚀 Build và đặt tên container hiệu quả với Docker Compose!
