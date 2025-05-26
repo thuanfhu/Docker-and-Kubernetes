@@ -1,79 +1,68 @@
-# 📝 Different Ways of Running Commands in Containers
+# 📝 Building a First Utility Container
 
-## 🚀 Các Cách Chạy Lệnh Trong Container
+## 🚀 Tạo Utility Container
 
-Docker cung cấp nhiều cách để chạy lệnh trong container, từ chạy trực tiếp đến ghi đè lệnh mặc định, phù hợp với các nhu cầu khác nhau.
-
----
-
-### 1. Chạy Container Với Chế Độ Tương Tác
-
-**Cú pháp:**
-
-```bash
-docker run -it node
-```
-
-**Ý nghĩa:**
-
-- `-i`: Interactive, giữ STDIN mở.
-
-- `-t`: TTY, cung cấp terminal tương tác.
-
-Chạy container `node` và mở shell để nhập lệnh (theo CMD mặc định trong image node là `node`).
+`Utility Containers` dùng để chạy các lệnh hỗ trợ (như `npm init`) trong môi trường cách ly. Chúng ta sẽ xây dựng một `Utility Container` dựa trên image `node:14-alpine`.
 
 ---
 
-### 2. Chạy Container Nền Rồi Thực Thi Lệnh
+### 1. Tạo Dockerfile
 
-**Bước 1:** Chạy container ở chế độ nền (detached):
+Tạo file `Dockerfile` với nội dung:
 
-```bash
-docker run -it -d node
+```dockerfile
+FROM node:14-alpine
+WORKDIR /app
 ```
 
-- `-d`: Detached, chạy container ở chế độ nền.
+**Giải thích:**
 
-- Trả về container ID, ví dụ: `abc123`.
+- `FROM node:14-alpine`: Dùng image nhẹ của Node.js phiên bản 14.
 
-**Bước 2:** Chạy lệnh trong container đang chạy:
-
-```bash
-docker exec -it abc123 npm init
-```
-
-- `docker exec`: Thực thi lệnh trong container đang chạy.
-
-- Thích hợp khi cần chạy nhiều lệnh trong cùng container.
+- `WORKDIR /app`: Đặt thư mục làm việc mặc định là `/app`.
 
 ---
 
-### 3. Ghi Đè Lệnh Mặc Định Khi Chạy Container
+### 2. Build Image
 
-**Cú pháp:**
+Build image với tên `node-utils`:
 
 ```bash
-docker run -it node npm init
+docker build -t node-utils .
 ```
 
-**Ý nghĩa:**
+---
 
-- Ghi đè CMD mặc định của image node (mặc định là `node`) bằng `npm init`.
+### 3. Chạy Utility Container
 
-- Container chạy `npm init` và thoát ngay sau khi hoàn thành.
+Chạy container để thực thi `npm init`, ánh xạ thư mục host vào container:
 
-**Lưu ý:** Chỉ chạy một lệnh duy nhất, không tái sử dụng container.
+```bash
+docker run -it -v $(pwd):/app node-utils npm init
+```
+
+**Giải thích:**
+
+- `-it`: Chạy tương tác với terminal.
+
+- `-v $(pwd):/app`: Ánh xạ thư mục hiện tại trên host vào `/app` trong container.
+
+- `node-utils`: Image vừa build.
+
+- `npm init`: Lệnh ghi đè CMD mặc định, khởi tạo dự án Node.js.
+
+**Kết quả:** File `package.json` được tạo trong thư mục host.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Tương tác trực tiếp: `docker run -it node` để mở shell.
+✅ Utility Container: Dùng image như `node:14-alpine` để chạy lệnh hỗ trợ.
 
-✅ Chế độ nền + exec: `docker run -it -d` rồi `docker exec -it <name> npm init` để chạy nhiều lệnh.
+✅ Dockerfile: Thiết lập môi trường với `FROM` và `WORKDIR`.
 
-✅ Ghi đè lệnh: `docker run -it node npm init` chạy lệnh duy nhất và thoát.
+✅ Volume với `-v`: Ánh xạ thư mục host để lưu kết quả (như `package.json`).
 
-✅ Chọn cách phù hợp: Dùng exec để tái sử dụng container, ghi đè cho tác vụ một lần.
+✅ Lệnh `npm init`: Ghi đè CMD mặc định để thực thi tác vụ.
 
-### 🚀 Linh hoạt chạy lệnh trong container với các cách trên!
+### 🚀 Tạo Utility Container để chạy lệnh cách ly và hiệu quả!
