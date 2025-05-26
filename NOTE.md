@@ -1,55 +1,79 @@
-# 📝 Module Introduction & What are Utility Containers for Support Tasks?
+# 📝 Different Ways of Running Commands in Containers
 
-## 🚀 Utility Containers Là Gì?
+## 🚀 Các Cách Chạy Lệnh Trong Container
 
-`Utility Containers` là các container được thiết kế để chạy các lệnh hỗ trợ hoặc bổ sung, không chứa logic ứng dụng chính mà phục vụ các tác vụ phụ như cài đặt, cấu hình, hoặc debug.
+Docker cung cấp nhiều cách để chạy lệnh trong container, từ chạy trực tiếp đến ghi đè lệnh mặc định, phù hợp với các nhu cầu khác nhau.
 
 ---
 
-### Ví dụ với `npm init`:
+### 1. Chạy Container Với Chế Độ Tương Tác
 
-Để chạy `npm init`, bạn cần môi trường Node.js. Thay vì cài Node.js trực tiếp trên máy host (có thể gây xung đột môi trường), bạn sử dụng một container có sẵn môi trường Node.js.
-
-**Utility Container:** Dùng image `node` để chạy `npm init` mà không cần cài Node.js trên host.
+**Cú pháp:**
 
 ```bash
-docker run -v $(pwd):/app -w /app node npm init
+docker run -it node
 ```
 
-**Giải thích:**
+**Ý nghĩa:**
 
-- `-v $(pwd):/app`: Ánh xạ thư mục hiện tại vào `/app` trong container.
+- `-i`: Interactive, giữ STDIN mở.
 
-- `-w /app`: Đặt thư mục làm việc.
+- `-t`: TTY, cung cấp terminal tương tác.
 
-- `node`: Image chứa môi trường Node.js.
-
-- `npm init`: Lệnh được thực thi.
+Chạy container `node` và mở shell để nhập lệnh (theo CMD mặc định trong image node là `node`).
 
 ---
 
-## So sánh với Application Containers
+### 2. Chạy Container Nền Rồi Thực Thi Lệnh
 
-| Đặc Điểm      | Application Containers                | Utility Containers                        |
-|---------------|--------------------------------------|-------------------------------------------|
-| **Mục đích**  | Chạy ứng dụng chính (ví dụ: myapp).  | Thực hiện lệnh hỗ trợ (ví dụ: npm init).  |
-| **Thực thi**  | Chạy CMD và khởi động ứng dụng.      | Thực thi lệnh tùy chỉnh hoặc bổ sung.     |
-| **Ví dụ**     | `docker run myapp` → Chạy ứng dụng.  | `docker run node npm init` → Khởi tạo dự án. |
+**Bước 1:** Chạy container ở chế độ nền (detached):
+
+```bash
+docker run -it -d node
+```
+
+- `-d`: Detached, chạy container ở chế độ nền.
+
+- Trả về container ID, ví dụ: `abc123`.
+
+**Bước 2:** Chạy lệnh trong container đang chạy:
+
+```bash
+docker exec -it abc123 npm init
+```
+
+- `docker exec`: Thực thi lệnh trong container đang chạy.
+
+- Thích hợp khi cần chạy nhiều lệnh trong cùng container.
 
 ---
 
-## Tại sao phù hợp với Docker?
+### 3. Ghi Đè Lệnh Mặc Định Khi Chạy Container
 
-`Utility Containers` tận dụng image (như `node`) để cung cấp môi trường cần thiết, đảm bảo tính cách ly và đồng nhất của Docker. Không cần cài Node.js trên host → Tránh xung đột môi trường, giữ hệ thống sạch sẽ.
+**Cú pháp:**
+
+```bash
+docker run -it node npm init
+```
+
+**Ý nghĩa:**
+
+- Ghi đè CMD mặc định của image node (mặc định là `node`) bằng `npm init`.
+
+- Container chạy `npm init` và thoát ngay sau khi hoàn thành.
+
+**Lưu ý:** Chỉ chạy một lệnh duy nhất, không tái sử dụng container.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Utility Containers chạy lệnh hỗ trợ (như `npm init`) trong môi trường cách ly.
+✅ Tương tác trực tiếp: `docker run -it node` để mở shell.
 
-✅ Không cần cài đặt trên host: Dùng image (ví dụ: `node`) để đảm bảo tính chuẩn Docker.
+✅ Chế độ nền + exec: `docker run -it -d` rồi `docker exec -it <name> npm init` để chạy nhiều lệnh.
 
-✅ Khác Application Containers: Hỗ trợ, không khởi động app chính.
+✅ Ghi đè lệnh: `docker run -it node npm init` chạy lệnh duy nhất và thoát.
 
-### 🚀 Dùng Utility Containers để xử lý tác vụ hiệu quả và đồng nhất!
+✅ Chọn cách phù hợp: Dùng exec để tái sử dụng container, ghi đè cho tác vụ một lần.
+
+### 🚀 Linh hoạt chạy lệnh trong container với các cách trên!
