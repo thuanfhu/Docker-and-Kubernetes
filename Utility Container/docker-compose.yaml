@@ -1,0 +1,11 @@
+name: utility-container
+
+services:
+  npm:
+    build: ./
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./:/app
+    entrypoint:
+      - npm

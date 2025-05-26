@@ -1,71 +1,92 @@
-# 📝 Utilizing ENTRYPOINT
+# 📝 Using Docker Compose
 
-## 🚀 ENTRYPOINT vs CMD Trong Dockerfile
+## 🚀 Giới Thiệu Docker Compose
 
-Dockerfile sử dụng `ENTRYPOINT` và `CMD` để định nghĩa cách chạy container, với sự khác biệt trong cách xử lý lệnh.
-
----
-
-### So Sánh
-
-| Đặc Điểm    | ENTRYPOINT                                 | CMD                                         |
-|-------------|--------------------------------------------|---------------------------------------------|
-| **Mục đích**    | Định nghĩa lệnh chính không thể ghi đè dễ dàng. | Định nghĩa lệnh mặc định, dễ bị ghi đè.      |
-| **Cách sử dụng**| Chạy như lệnh cố định, có thể thêm tham số.     | Chạy như mặc định, bị thay thế khi chạy container. |
-| **Ví dụ**       | `ENTRYPOINT ["npm"]` + `init` → Chạy `npm init`. | `CMD ["node"]` + `npm init` → Ghi đè thành `npm init`. |
+`Docker Compose` là công cụ quản lý nhiều container qua file `docker-compose.yaml`, giúp định nghĩa và chạy ứng dụng đa container. Chúng ta sẽ xây dựng một Utility Container để chạy `npm init`.
 
 ---
 
-### Ví Dụ Với `npm init`
+### 1. File Dockerfile
 
-**Với CMD:**
+Tạo file `Dockerfile` với nội dung:
 
 ```dockerfile
 FROM node:14-alpine
-CMD ["node"]
-```
-
-Chạy:
-
-```bash
-docker run -it my-image npm init
-```
-
-`CMD ["node"]` bị ghi đè, container chạy `npm init` và thoát.
-
----
-
-**Với ENTRYPOINT:**
-
-```dockerfile
-FROM node:14-alpine
+WORKDIR /app
 ENTRYPOINT ["npm"]
 ```
 
-Chạy:
+**Giải thích:**
 
-```bash
-docker run -it my-image init
+- `FROM node:14-alpine`: Dùng image Node.js nhẹ.
+
+- `WORKDIR /app`: Đặt thư mục làm việc.
+
+- `ENTRYPOINT ["npm"]`: Định nghĩa lệnh chính là npm.
+
+---
+
+### 2. File docker-compose.yaml
+
+Tạo file `docker-compose.yaml` với nội dung:
+
+```yaml
+name: utility-container
+services:
+  npm:
+    build: ./
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./:/app
+    entrypoint:
+      - npm
 ```
 
-`ENTRYPOINT ["npm"]` giữ lệnh chính, `init` là tham số, chạy `npm init`.
+**Giải thích:**
 
-**Thêm lệnh:**
+- `name: utility-container`: Đặt tên dự án.
+
+- `services.npm`: Dịch vụ npm, build từ thư mục hiện tại (`build: ./`).
+
+- `stdin_open: true` và `tty: true`: Bật chế độ tương tác.
+
+- `volumes: - ./:/app`: Ánh xạ thư mục host vào `/app`.
+
+- `entrypoint: - npm`: Định nghĩa lệnh chính (tương thích với Dockerfile).
+
+---
+
+### 3. Chạy Lệnh Với Docker Compose
+
+Chạy container và thực thi `npm init` với cú pháp chuẩn:
 
 ```bash
-docker run -it my-image install express --save
+docker compose run --rm npm init
 ```
 
-Chạy `npm install express --save`, tạo file `package.json` với dependency.
+**Giải thích:**
+
+- `docker compose run`: Chạy một dịch vụ từ file `docker-compose.yaml`.
+
+- `--rm`: Xóa container sau khi hoàn thành (theo tài liệu Docker, tối ưu hóa tài nguyên).
+
+- `npm`: Tên dịch vụ trong file `docker-compose.yaml`.
+
+- `init`: Tham số cho `ENTRYPOINT ["npm"]`, chạy `npm init`.
+
+**Kết quả:** Tạo file `package.json` trong thư mục host (`./`).
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ ENTRYPOINT: Lệnh cố định, thêm tham số khi chạy (ví dụ: ENTRYPOINT ["npm"] + init).
+✅ Docker Compose: Quản lý container qua `docker-compose.yaml`.
 
-✅ CMD: Lệnh mặc định, bị ghi đè (ví dụ: CMD ["node"] + npm init).
+✅ Dockerfile: Định nghĩa môi trường với `ENTRYPOINT ["npm"]`.
 
-✅ Chọn đúng: Dùng ENTRYPOINT cho lệnh chính, CMD cho mặc định dễ thay đổi.
+✅ Chạy lệnh: `docker compose run --rm npm init` để thực thi `npm init`.
 
-### 🚀 Sử dụng ENTRYPOINT để tối ưu hóa cách chạy container!
+✅ Volume: Ánh xạ `./:/app` để lưu kết quả.
+
+### 🚀 Sử dụng Docker Compose để quản lý Utility Container hiệu quả!
