@@ -1,78 +1,55 @@
-# 📝 Building Images & Understanding Container Names
+# 📝 Module Introduction & What are Utility Containers for Support Tasks?
 
-## 📌 Tổng Quan
+## 🚀 Utility Containers Là Gì?
 
-🛠️ `Docker Compose` hỗ trợ build image và quản lý container với tên tự động hoặc tùy chỉnh, giúp triển khai ứng dụng hiệu quả.
-
----
-
-## 🔨 Building Images với `docker compose up --build`
-
-- **Chức năng:** `docker compose up --build` khởi động services và build lại image nếu được khai báo trong file `docker-compose.yaml`.
-
-- **Khi nào dùng:** Khi source code thay đổi (ví dụ: chỉnh sửa file trong thư mục `build: ./backend`), image cần được build lại để phản ánh thay đổi. Nếu không dùng `--build`, Compose sẽ dùng image cũ, không áp dụng thay đổi.
-
-- **Ví dụ:**
-
-  ```yaml
-  services:
-    backend:
-      build: ./backend
-  ```
-
-- **Chạy:**
-
-  ```
-  docker compose up --build
-  ```
-
-  → Build lại image từ thư mục `./backend`, sau đó chạy container.
+`Utility Containers` là các container được thiết kế để chạy các lệnh hỗ trợ hoặc bổ sung, không chứa logic ứng dụng chính mà phục vụ các tác vụ phụ như cài đặt, cấu hình, hoặc debug.
 
 ---
 
-## 🏷️ Quy Ước Tên Container
+### Ví dụ với `npm init`:
 
-- **Tự động:** Docker Compose đặt tên container theo mẫu `<project-name>_<service-name>_<index>` (ví dụ: `myapp_backend_1` nếu project là myapp, service là backend).
+Để chạy `npm init`, bạn cần môi trường Node.js. Thay vì cài Node.js trực tiếp trên máy host (có thể gây xung đột môi trường), bạn sử dụng một container có sẵn môi trường Node.js.
 
-- **Tùy chỉnh:** Dùng `container_name: <name>` để đặt tên thủ công.
+**Utility Container:** Dùng image `node` để chạy `npm init` mà không cần cài Node.js trên host.
 
-- **Ví dụ:**
+```bash
+docker run -v $(pwd):/app -w /app node npm init
+```
 
-  ```yaml
-  services:
-    backend:
-      build: ./backend
-      container_name: custom-backend
-  ```
+**Giải thích:**
 
-  → Container sẽ có tên chính xác là `custom-backend`.
+- `-v $(pwd):/app`: Ánh xạ thư mục hiện tại vào `/app` trong container.
 
-- **Kiểm tra:**
+- `-w /app`: Đặt thư mục làm việc.
 
-  ```
-  docker ps
-  ```
+- `node`: Image chứa môi trường Node.js.
+
+- `npm init`: Lệnh được thực thi.
 
 ---
 
-## ⚠️ Lưu Ý Quan Trọng
+## So sánh với Application Containers
 
-❗ `--build` cần thiết khi source code thay đổi, nếu không container sẽ chạy image cũ.
+| Đặc Điểm      | Application Containers                | Utility Containers                        |
+|---------------|--------------------------------------|-------------------------------------------|
+| **Mục đích**  | Chạy ứng dụng chính (ví dụ: myapp).  | Thực hiện lệnh hỗ trợ (ví dụ: npm init).  |
+| **Thực thi**  | Chạy CMD và khởi động ứng dụng.      | Thực thi lệnh tùy chỉnh hoặc bổ sung.     |
+| **Ví dụ**     | `docker run myapp` → Chạy ứng dụng.  | `docker run node npm init` → Khởi tạo dự án. |
 
-❗ `container_name` phải duy nhất, không trùng với container khác.
+---
 
-❗ Tên tự động tiện cho quản lý mặc định, nhưng `container_name` hữu ích khi cần tên cố định (ví dụ: để gọi trong script).
+## Tại sao phù hợp với Docker?
+
+`Utility Containers` tận dụng image (như `node`) để cung cấp môi trường cần thiết, đảm bảo tính cách ly và đồng nhất của Docker. Không cần cài Node.js trên host → Tránh xung đột môi trường, giữ hệ thống sạch sẽ.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ `docker compose up --build`: Build lại image khi source code thay đổi.
+✅ Utility Containers chạy lệnh hỗ trợ (như `npm init`) trong môi trường cách ly.
 
-✅ Tên container: Tự động `<project>_<service>_<index>` hoặc tùy chỉnh với `container_name`.
+✅ Không cần cài đặt trên host: Dùng image (ví dụ: `node`) để đảm bảo tính chuẩn Docker.
 
-✅ Kiểm tra tên bằng `docker ps`.
+✅ Khác Application Containers: Hỗ trợ, không khởi động app chính.
 
----
-
-### 🚀 Build và đặt tên container hiệu quả với Docker Compose!
+### 🚀 Dùng Utility Containers để xử lý tác vụ hiệu quả và đồng nhất!
