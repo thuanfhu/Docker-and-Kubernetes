@@ -1,68 +1,71 @@
-# 📝 Building a First Utility Container
+# 📝 Utilizing ENTRYPOINT
 
-## 🚀 Tạo Utility Container
+## 🚀 ENTRYPOINT vs CMD Trong Dockerfile
 
-`Utility Containers` dùng để chạy các lệnh hỗ trợ (như `npm init`) trong môi trường cách ly. Chúng ta sẽ xây dựng một `Utility Container` dựa trên image `node:14-alpine`.
+Dockerfile sử dụng `ENTRYPOINT` và `CMD` để định nghĩa cách chạy container, với sự khác biệt trong cách xử lý lệnh.
 
 ---
 
-### 1. Tạo Dockerfile
+### So Sánh
 
-Tạo file `Dockerfile` với nội dung:
+| Đặc Điểm    | ENTRYPOINT                                 | CMD                                         |
+|-------------|--------------------------------------------|---------------------------------------------|
+| **Mục đích**    | Định nghĩa lệnh chính không thể ghi đè dễ dàng. | Định nghĩa lệnh mặc định, dễ bị ghi đè.      |
+| **Cách sử dụng**| Chạy như lệnh cố định, có thể thêm tham số.     | Chạy như mặc định, bị thay thế khi chạy container. |
+| **Ví dụ**       | `ENTRYPOINT ["npm"]` + `init` → Chạy `npm init`. | `CMD ["node"]` + `npm init` → Ghi đè thành `npm init`. |
+
+---
+
+### Ví Dụ Với `npm init`
+
+**Với CMD:**
 
 ```dockerfile
 FROM node:14-alpine
-WORKDIR /app
+CMD ["node"]
 ```
 
-**Giải thích:**
+Chạy:
 
-- `FROM node:14-alpine`: Dùng image nhẹ của Node.js phiên bản 14.
+```bash
+docker run -it my-image npm init
+```
 
-- `WORKDIR /app`: Đặt thư mục làm việc mặc định là `/app`.
+`CMD ["node"]` bị ghi đè, container chạy `npm init` và thoát.
 
 ---
 
-### 2. Build Image
+**Với ENTRYPOINT:**
 
-Build image với tên `node-utils`:
-
-```bash
-docker build -t node-utils .
+```dockerfile
+FROM node:14-alpine
+ENTRYPOINT ["npm"]
 ```
 
----
-
-### 3. Chạy Utility Container
-
-Chạy container để thực thi `npm init`, ánh xạ thư mục host vào container:
+Chạy:
 
 ```bash
-docker run -it -v $(pwd):/app node-utils npm init
+docker run -it my-image init
 ```
 
-**Giải thích:**
+`ENTRYPOINT ["npm"]` giữ lệnh chính, `init` là tham số, chạy `npm init`.
 
-- `-it`: Chạy tương tác với terminal.
+**Thêm lệnh:**
 
-- `-v $(pwd):/app`: Ánh xạ thư mục hiện tại trên host vào `/app` trong container.
+```bash
+docker run -it my-image install express --save
+```
 
-- `node-utils`: Image vừa build.
-
-- `npm init`: Lệnh ghi đè CMD mặc định, khởi tạo dự án Node.js.
-
-**Kết quả:** File `package.json` được tạo trong thư mục host.
+Chạy `npm install express --save`, tạo file `package.json` với dependency.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Utility Container: Dùng image như `node:14-alpine` để chạy lệnh hỗ trợ.
+✅ ENTRYPOINT: Lệnh cố định, thêm tham số khi chạy (ví dụ: ENTRYPOINT ["npm"] + init).
 
-✅ Dockerfile: Thiết lập môi trường với `FROM` và `WORKDIR`.
+✅ CMD: Lệnh mặc định, bị ghi đè (ví dụ: CMD ["node"] + npm init).
 
-✅ Volume với `-v`: Ánh xạ thư mục host để lưu kết quả (như `package.json`).
+✅ Chọn đúng: Dùng ENTRYPOINT cho lệnh chính, CMD cho mặc định dễ thay đổi.
 
-✅ Lệnh `npm init`: Ghi đè CMD mặc định để thực thi tác vụ.
-
-### 🚀 Tạo Utility Container để chạy lệnh cách ly và hiệu quả!
+### 🚀 Sử dụng ENTRYPOINT để tối ưu hóa cách chạy container!
