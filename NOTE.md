@@ -1,38 +1,18 @@
-# 📝 **Adding a PHP Container**
+# 📝 **Adding a MySQL Container**
 
 ---
 
 ## 🚀 **Tổng Quan**
 
-Thêm container **PHP** để xử lý logic ứng dụng Laravel, kết nối với Nginx qua FastCGI. Container này được xây dựng từ file `php.dockerfile` và quản lý trong `docker-compose.yaml`, với cổng giao tiếp được cập nhật thành **9000**.
+Thêm container **MySQL** để cung cấp cơ sở dữ liệu cho ứng dụng Laravel, kết nối với container PHP. Container này được định nghĩa trong `docker-compose.yaml` với các biến môi trường từ file `mysql.env`, đảm bảo cấu hình an toàn và linh hoạt.
 
 ---
 
 ## 🔍 **Giải Thích File Cấu Hình**
 
-### 1. File `php.dockerfile`
+### 1. File `docker-compose.yaml`
 
-Tạo file `php.dockerfile` với nội dung:
-
-```dockerfile
-FROM php:8.4-rc-fpm-alpine
-WORKDIR /var/www/html
-RUN docker-php-ext-install pdo pdo_mysql
-```
-
-**Giải thích chi tiết:**
-
-- **FROM php:8.4-rc-fpm-alpine:** Dùng image PHP 8.4 với FastCGI Process Manager (FPM) trên nền Alpine (nhẹ).
-
-- **WORKDIR /var/www/html:** Đặt thư mục làm việc là thư mục ứng dụng Laravel.
-
-- **RUN docker-php-ext-install pdo pdo_mysql:** Cài đặt extension PHP pdo và pdo_mysql để hỗ trợ kết nối cơ sở dữ liệu MySQL.
-
----
-
-### 2. File `docker-compose.yaml`
-
-Cập nhật file `docker-compose.yaml` với dịch vụ php:
+Cập nhật file `docker-compose.yaml` với dịch vụ mysql:
 
 ```yaml
 name: PHP Laravel Dockerized
@@ -50,61 +30,57 @@ services:
       dockerfile: php.dockerfile
     volumes:
       - ./src:/var/www/html:delegated
+  mysql:
+    image: mysql:9.3.0
+    env-file:
+      - ./env/mysql.env
 ```
 
 **Giải thích chi tiết:**
 
-- **services.php:** Định nghĩa dịch vụ PHP, xây dựng từ `php.dockerfile` trong thư mục `./dockerfiles`.
+- **services.mysql:** Định nghĩa dịch vụ MySQL, sử dụng image `mysql:9.3.0`.
 
-- **build.context: ./dockerfiles:** Thư mục chứa file `php.dockerfile`.
+- **image:** Dùng image MySQL chính thức từ Docker Hub, đảm bảo tính ổn định.
 
-- **build.dockerfile: php.dockerfile:** Chỉ định file build.
-
-- **volumes: - ./src:/var/www/html:delegated:** Ánh xạ thư mục `./src` (mã nguồn Laravel) vào `/var/www/html`.
-
-- **:delegated tối ưu hiệu suất:** Theo tài liệu Docker, `:delegated` là một tùy chọn volume trên macOS/Windows khi dùng Docker Desktop, ưu tiên hiệu suất bằng cách giảm tần suất đồng bộ hóa file từ container về host. Điều này cải thiện tốc độ khi làm việc với mã nguồn lớn (như Laravel), nhưng host không phản ánh thay đổi ngay lập tức từ container (dùng `:consistent` nếu cần đồng bộ tức thời).
+- **env-file:** Tải các biến môi trường từ file `mysql.env` (ví dụ: MYSQL_DATABASE, MYSQL_USER, v.v.) để cấu hình MySQL mà không cần hardcode trong file YAML.
 
 ---
 
-### 3. Cập Nhật File `nginx.conf`
+### 2. File `mysql.env`
 
-Cập nhật cổng trong `nginx.conf` để giao tiếp giữa container:
+Tạo file `mysql.env` với nội dung:
 
-```nginx
-server {
-    listen 80;
-    index index.php index.html;
-    server_name localhost;
-    root /var/www/html/public;
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-    location ~ \.php$ {
-        try_files $uri =404;
-        fastcgi_split_path_info ^(.+\.php)(/.+)$;
-        fastcgi_pass php:9000; # update port 9000
-        fastcgi_index index.php;
-        include fastcgi_params;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        fastcgi_param PATH_INFO $fastcgi_path_info;
-    }
-}
+```env
+MYSQL_DATABASE=laravel
+MYSQL_USER=thuanflu
+MYSQL_PASSWORD=secret
+MYSQL_ROOT_PASSWORD=secret
 ```
 
-**Cập nhật cổng:** Thay vì `php:3000`, giờ dùng `fastcgi_pass php:9000` để kết nối với container PHP trên cổng 9000, phù hợp với image `php:8.4-fpm-alpine` (mặc định dùng cổng 9000).
+**Giải thích chi tiết:**
+
+- **MYSQL_DATABASE=laravel:** Tạo cơ sở dữ liệu tên laravel khi container khởi động.
+
+- **MYSQL_USER=thuanflu:** Tạo người dùng MySQL với tên thuanflu.
+
+- **MYSQL_PASSWORD=secret:** Mật khẩu cho người dùng thuanflu.
+
+- **MYSQL_ROOT_PASSWORD=secret:** Mật khẩu cho tài khoản root MySQL.
+
+> Lưu ý: Theo tài liệu Docker, sử dụng file `.env` giúp bảo mật thông tin nhạy cảm, tránh commit vào version control.
 
 ---
 
 ## 📌 **Tóm Tắt Kiến Thức Quan Trọng**
 
-✅ **PHP Container:** Xây từ php:8.4-fpm-alpine, cài pdo và pdo_mysql.
+✅ **MySQL Container:** Dùng mysql:9.3.0, cấu hình qua env-file.
 
-✅ **docker-compose.yaml:** Build từ php.dockerfile, ánh xạ ./src vào /var/www/html với :delegated để tối ưu hiệu suất.
+✅ **mysql.env:** Định nghĩa MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD.
 
-✅ **nginx.conf:** Cập nhật fastcgi_pass php:9000 để giao tiếp với PHP container.
+✅ **Kết nối:** PHP container sẽ dùng thông tin này để liên kết với MySQL (cần cấu hình thêm trong Laravel).
 
-✅ **Cổng 9000:** Tiêu chuẩn cho PHP-FPM, đảm bảo kết nối giữa Nginx và PHP.
+✅ **Bảo mật:** Sử dụng file .env để quản lý thông tin nhạy cảm.
 
 ---
 
-### 🚀 **Thêm PHP Container để chạy ứng dụng Laravel hoàn chỉnh!**
+### 🚀 **Thêm MySQL Container để hoàn thiện cơ sở dữ liệu cho Laravel!**
