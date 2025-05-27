@@ -1,18 +1,18 @@
-# 📝 **Launching Only Specific Docker Compose Services**
+# 📝 Adding More Utility Containers
+
+## 🚀 Tổng Quan
+
+Thêm các container tiện ích (`Utility Containers`) như **artisan** và **npm** để hỗ trợ phát triển Laravel:  
+
+- **artisan** chạy lệnh Laravel CLI  
+
+- **npm** quản lý gói JavaScript.
 
 ---
 
-## 🚀 **Tổng Quan**
+## 🔍 Giải Thích Dịch Vụ
 
-Sau khi khởi tạo ứng dụng Laravel bằng container `Composer` (sử dụng `docker compose run --rm composer create-project --prefer-dist laravel/laravel .`), chúng ta sẽ tiếp tục chạy các dịch vụ cần thiết khác (**Nginx**, **PHP**, **MySQL**).
-
----
-
-## 🔍 **Cập Nhật File Cấu Hình**
-
-### 🛠️ **1. File `docker-compose.yaml`**
-
-Cập nhật file `docker-compose.yaml` với dịch vụ server (Nginx):
+### File `docker-compose.yaml`
 
 ```yaml
 name: PHP Laravel Dockerized
@@ -21,96 +21,98 @@ services:
   server:
     image: nginx:stable-alpine
     ports:
-      - "8080:80"
+      - '8080:80'
     volumes:
-      - ./src:/var/www/html           # Bind mount src từ host
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro  # Cập nhật đường dẫn config
+      - ./src:/var/www/html
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - php
       - mysql
+
   php:
     build:
-      context: ./dockerfiles
+      context: ./
       dockerfile: php.dockerfile
     volumes:
       - ./src:/var/www/html:delegated
+
   mysql:
     image: mysql:9.3.0
     env_file:
       - ./env/mysql.env
+
   composer:
     build:
-      context: ./dockerfiles
+      context: ./
       dockerfile: composer.dockerfile
+    volumes:
+      - ./src:/var/www/html
+
+  artisan:
+    build:
+      context: ./
+      dockerfile: php.dockerfile
+    volumes:
+      - ./src:/var/www/html
+    entrypoint: ["php", "/var/www/html/artisan"]
+
+  npm:
+    image: node:14
+    working_dir: /var/www/html
+    entrypoint: ["npm"]
     volumes:
       - ./src:/var/www/html
 ```
 
-**Giải thích chi tiết:**
+---
 
-- Đổi tên dịch vụ: Từ **nginx** thành **server** cho rõ vai trò web server.
+### Dịch vụ **artisan**:
 
-- **Bind mount** `./src:/var/www/html`: Nginx cần mã nguồn Laravel trong `/var/www/html` để phục vụ. Bind mount từ `./src` (thư mục host chứa mã nguồn) đảm bảo Nginx truy cập mã nguồn và file public của Laravel.
+- `build: context: ./` và `dockerfile: php.dockerfile`: Dùng cùng php.dockerfile với dịch vụ PHP, đảm bảo môi trường PHP phù hợp.
 
-- **Cập nhật volume config:** Thay `/etc/nginx/nginx.conf` bằng `/etc/nginx/conf.d/default.conf` để phù hợp với cấu trúc Nginx Alpine, mount file config chỉ đọc (`:ro`).
+- `volumes: - ./src:/var/www/html`: Bind mount thư mục src để truy cập mã nguồn Laravel.
 
-- **depends_on:** Đảm bảo **server** phụ thuộc vào **php** và **mysql**, các dịch vụ này khởi động trước để Nginx hoạt động ổn định.
+- `entrypoint: ["php", "/var/www/html/artisan"]`: Chạy lệnh php artisan, công cụ CLI của Laravel, cho phép thực thi các lệnh như migrate, seed, v.v.
 
 ---
 
-### 📝 **2. Cập Nhật File `src/.env`**
+### Dịch vụ **npm**:
 
-Cập nhật file `.env` trong thư mục `src` (tạo bởi Composer):
+- `image: node:14`: Dùng image Node.js phiên bản 14.
 
-```env
-DB_CONNECTION=mysql
-DB_HOST=mysql        # mysql container (define in docker-compose file)
-DB_PORT=3306
-DB_DATABASE=laravel
-DB_USERNAME=thuanflu
-DB_PASSWORD=secret
+- `working_dir: /var/www/html`: Đặt thư mục làm việc để khớp với mã nguồn Laravel.
+
+- `entrypoint: ["npm"]`: Định nghĩa lệnh chính là npm, dùng để quản lý gói JavaScript (như cài đặt Tailwind CSS).
+
+- `volumes: - ./src:/var/www/html`: Bind mount để đồng bộ thư viện JavaScript (như node_modules) với host.
+
+---
+
+## Chạy Lệnh Migrate Với Artisan
+
+Chạy lệnh để áp dụng migration cho cơ sở dữ liệu Laravel:
+
+```sh
+docker compose run artisan migrate
 ```
 
-**Giải thích chi tiết:**
+**Giải thích:**  
+- `docker compose run artisan`: Chạy dịch vụ artisan từ docker-compose.yaml.  
 
-- Thay `DB_CONNECTION=sqlite` bằng `mysql` để dùng MySQL.
-
-- `DB_HOST=mysql`: Trỏ đến dịch vụ mysql trong docker-compose.yaml, tận dụng DNS của Docker network.
-
-- Cập nhật thông tin từ `mysql.env` (`DB_USERNAME`, `DB_PASSWORD`) để khớp với container MySQL.
+- `migrate`: Tham số cho entrypoint, chạy lệnh `php artisan migrate`, tạo bảng trong cơ sở dữ liệu MySQL.
 
 ---
 
-### 🚦 **3. Chạy Dịch Vụ Cụ Thể**
+## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-Thay vì `docker compose up -d server php mysql`, chỉ chạy dịch vụ server:
+✅ Artisan Container: Dùng php.dockerfile, chạy php artisan với entrypoint (ví dụ: migrate).
 
-```bash
-docker compose up -d --build server
-```
+✅ NPM Container: Dùng node:14, quản lý gói JavaScript với entrypoint: ["npm"].
 
-**Giải thích chi tiết:**
+✅ Bind Mount: Cả hai dịch vụ mount ./src:/var/www/html để đồng bộ mã nguồn và thư viện.
 
-- `docker compose up -d`: Khởi động dịch vụ ở chế độ nền (detached).
-
-- `--build`: Xây dựng lại image nếu có thay đổi trong Dockerfile (nếu không có thay đổi, Docker sử dụng cache để tối ưu thời gian).
-
-- `server`: Chỉ chạy dịch vụ server, nhưng `depends_on` đảm bảo php và mysql cũng khởi động trước.
-
-- **Tác dụng của depends_on:** Đảm bảo thứ tự khởi động, tránh lỗi kết nối từ server đến php hoặc mysql khi chúng chưa sẵn sàng.
+✅ Lệnh Migrate: `docker compose run artisan migrate` áp dụng migration cho DB.
 
 ---
 
-## 📌 **Tóm Tắt Kiến Thức Quan Trọng**
-
-✅ **Chạy dịch vụ cụ thể:** Dùng `docker compose up -d --build server` với depends_on.
-
-✅ **Bind mount:** `./src:/var/www/html` cung cấp mã nguồn cho Nginx.
-
-✅ **Cập nhật .env:** Đặt `DB_HOST=mysql` để kết nối với MySQL container.
-
-✅ **--build:** Xây lại image nếu cần, dùng cache nếu không thay đổi.
-
----
-
-### 🚀 **Khởi động dịch vụ cần thiết một cách hiệu quả với Docker Compose!**
+### 🚀 Thêm Utility Containers để hỗ trợ phát triển Laravel hiệu quả!

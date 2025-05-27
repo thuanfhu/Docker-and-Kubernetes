@@ -2,7 +2,7 @@ FROM php:8.4-rc-fpm-alpine
 
 WORKDIR /var/www/html
 
-COPY ../src .
+COPY src .
 
 RUN docker-php-ext-install pdo pdo_mysql
 
