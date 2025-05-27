@@ -1,10 +1,10 @@
-# 📝 **Adding a MySQL Container**
+# 📝 **Adding a Composer Utility Container**
 
 ---
 
 ## 🚀 **Tổng Quan**
 
-Thêm container **MySQL** để cung cấp cơ sở dữ liệu cho ứng dụng Laravel, kết nối với container PHP. Container này được định nghĩa trong `docker-compose.yaml` với các biến môi trường từ file `mysql.env`, đảm bảo cấu hình an toàn và linh hoạt.
+Thêm container **Composer** để quản lý các thư viện PHP (như Laravel dependencies) trong dự án. Container này được định nghĩa trong `docker-compose.yaml` và xây dựng từ `composer.dockerfile`, sử dụng bind mount để đồng bộ mã nguồn.
 
 ---
 
@@ -12,7 +12,7 @@ Thêm container **MySQL** để cung cấp cơ sở dữ liệu cho ứng dụng
 
 ### 1. File `docker-compose.yaml`
 
-Cập nhật file `docker-compose.yaml` với dịch vụ mysql:
+Cập nhật file `docker-compose.yaml` với dịch vụ composer:
 
 ```yaml
 name: PHP Laravel Dockerized
@@ -34,53 +34,60 @@ services:
     image: mysql:9.3.0
     env-file:
       - ./env/mysql.env
+  composer:
+    build:
+      context: ./dockerfiles
+      dockerfile: composer.dockerfile
+    volumes:
+      - ./src:/var/www/html
 ```
 
 **Giải thích chi tiết:**
 
-- **services.mysql:** Định nghĩa dịch vụ MySQL, sử dụng image `mysql:9.3.0`.
+- **services.composer:** Dịch vụ Composer, xây dựng từ `composer.dockerfile` trong `./dockerfiles`.
 
-- **image:** Dùng image MySQL chính thức từ Docker Hub, đảm bảo tính ổn định.
+- **build.context:** Thư mục chứa file `composer.dockerfile`.
 
-- **env-file:** Tải các biến môi trường từ file `mysql.env` (ví dụ: MYSQL_DATABASE, MYSQL_USER, v.v.) để cấu hình MySQL mà không cần hardcode trong file YAML.
+- **build.dockerfile:** Chỉ định file build.
+
+- **volumes:** Bind mount thư mục `./src` (mã nguồn Laravel) vào `/var/www/html` trong container.
+
+> Lý do bind mount: Cần đồng bộ mã nguồn và thư viện (như vendor) giữa host và container Composer. Vì Composer tải các gói phụ thuộc vào `/var/www/html`, bind mount đảm bảo các thay đổi (như composer install) được phản ánh trực tiếp trên host, phục vụ cho container PHP.
 
 ---
 
-### 2. File `mysql.env`
+### 2. File `composer.dockerfile`
 
-Tạo file `mysql.env` với nội dung:
+Tạo file `composer.dockerfile` với nội dung:
 
-```env
-MYSQL_DATABASE=laravel
-MYSQL_USER=thuanflu
-MYSQL_PASSWORD=secret
-MYSQL_ROOT_PASSWORD=secret
+```dockerfile
+FROM composer:latest
+WORKDIR /var/www/html
+ENTRYPOINT [ "composer", "--ignore-platform-reqs" ]
 ```
 
 **Giải thích chi tiết:**
 
-- **MYSQL_DATABASE=laravel:** Tạo cơ sở dữ liệu tên laravel khi container khởi động.
+- **FROM composer:latest:** Dùng image chính thức của Composer, chứa công cụ quản lý gói PHP.
 
-- **MYSQL_USER=thuanflu:** Tạo người dùng MySQL với tên thuanflu.
+- **WORKDIR /var/www/html:** Đặt thư mục làm việc là nơi mã nguồn Laravel được mount.
 
-- **MYSQL_PASSWORD=secret:** Mật khẩu cho người dùng thuanflu.
+- **ENTRYPOINT [ "composer", "--ignore-platform-reqs" ]:** ENTRYPOINT định nghĩa lệnh chính là composer, chạy khi container khởi động. `--ignore-platform-reqs` bỏ qua các yêu cầu về phiên bản PHP/extension trên host/container, cho phép cài đặt gói ngay cả khi môi trường không khớp.
 
-- **MYSQL_ROOT_PASSWORD=secret:** Mật khẩu cho tài khoản root MySQL.
-
-> Lưu ý: Theo tài liệu Docker, sử dụng file `.env` giúp bảo mật thông tin nhạy cảm, tránh commit vào version control.
+> Tại sao cần `--ignore-platform-reqs`? Trong môi trường phát triển, host có thể không có PHP hoặc phiên bản không khớp với container. Tùy chọn này đảm bảo Composer hoạt động, nhưng cần kiểm tra tương thích khi triển khai sản phẩm.
 
 ---
 
 ## 📌 **Tóm Tắt Kiến Thức Quan Trọng**
 
-✅ **MySQL Container:** Dùng mysql:9.3.0, cấu hình qua env-file.
+✅ **Composer Container:** Xây từ composer:latest, dùng để quản lý gói PHP.
 
-✅ **mysql.env:** Định nghĩa MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD.
+✅ **Bind Mount:** Ánh xạ ./src:/var/www/html để đồng bộ mã nguồn và thư viện.
 
-✅ **Kết nối:** PHP container sẽ dùng thông tin này để liên kết với MySQL (cần cấu hình thêm trong Laravel).
+✅ **ENTRYPOINT [ "composer", "--ignore-platform-reqs" ]:** Chạy composer với tùy chọn bỏ qua yêu cầu môi trường, đảm bảo cài đặt linh hoạt.
 
-✅ **Bảo mật:** Sử dụng file .env để quản lý thông tin nhạy cảm.
+✅ **Mục đích:** Hỗ trợ cài đặt dependencies (như composer install) cho Laravel.
 
 ---
 
-### 🚀 **Thêm MySQL Container để hoàn thiện cơ sở dữ liệu cho Laravel!**
+### 🚀 **Thêm Composer Container để quản lý thư viện dễ dàng!**

@@ -17,3 +17,9 @@ services:
     image: mysql:9.3.0
     env-file:
       - ./env/mysql.env
+  composer:
+    build:
+      context: ./dockerfiles
+      dockerfile: composer.dockerfile
+    volumes:
+      - ./src:/var/www/html
