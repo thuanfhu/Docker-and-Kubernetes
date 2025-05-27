@@ -1,23 +1,43 @@
-# 📝 **Creating a Laravel App via the Composer Utility Container**
+# 📝 **Launching Only Specific Docker Compose Services**
 
 ---
 
 ## 🚀 **Tổng Quan**
 
-Sử dụng container **Composer** trong Docker Compose để tạo ứng dụng Laravel mới, tận dụng môi trường cách ly mà không cần cài Composer trên máy host. Lệnh `docker compose run` sẽ thực thi tác vụ này.
+Sau khi khởi tạo ứng dụng Laravel bằng container `Composer` (sử dụng `docker compose run --rm composer create-project --prefer-dist laravel/laravel .`), chúng ta sẽ tiếp tục chạy các dịch vụ cần thiết khác (**Nginx**, **PHP**, **MySQL**).
 
 ---
 
-## 🔍 **Thực Hiện Tạo Ứng Dụng**
+## 🔍 **Cập Nhật File Cấu Hình**
 
 ### 🛠️ **1. File `docker-compose.yaml`**
 
-Dịch vụ composer đã được định nghĩa:
+Cập nhật file `docker-compose.yaml` với dịch vụ server (Nginx):
 
 ```yaml
 name: PHP Laravel Dockerized
 
 services:
+  server:
+    image: nginx:stable-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html           # Bind mount src từ host
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro  # Cập nhật đường dẫn config
+    depends_on:
+      - php
+      - mysql
+  php:
+    build:
+      context: ./dockerfiles
+      dockerfile: php.dockerfile
+    volumes:
+      - ./src:/var/www/html:delegated
+  mysql:
+    image: mysql:9.3.0
+    env_file:
+      - ./env/mysql.env
   composer:
     build:
       context: ./dockerfiles
@@ -26,62 +46,71 @@ services:
       - ./src:/var/www/html
 ```
 
-**Giải thích:** Dịch vụ composer ánh xạ `./src` vào `/var/www/html` để lưu mã nguồn Laravel.
+**Giải thích chi tiết:**
+
+- Đổi tên dịch vụ: Từ **nginx** thành **server** cho rõ vai trò web server.
+
+- **Bind mount** `./src:/var/www/html`: Nginx cần mã nguồn Laravel trong `/var/www/html` để phục vụ. Bind mount từ `./src` (thư mục host chứa mã nguồn) đảm bảo Nginx truy cập mã nguồn và file public của Laravel.
+
+- **Cập nhật volume config:** Thay `/etc/nginx/nginx.conf` bằng `/etc/nginx/conf.d/default.conf` để phù hợp với cấu trúc Nginx Alpine, mount file config chỉ đọc (`:ro`).
+
+- **depends_on:** Đảm bảo **server** phụ thuộc vào **php** và **mysql**, các dịch vụ này khởi động trước để Nginx hoạt động ổn định.
 
 ---
 
-### 🛠️ **2. File `composer.dockerfile`**
+### 📝 **2. Cập Nhật File `src/.env`**
 
-File composer.dockerfile đã có:
+Cập nhật file `.env` trong thư mục `src` (tạo bởi Composer):
 
-```dockerfile
-FROM composer:latest
-WORKDIR /var/www/html
-ENTRYPOINT [ "composer", "--ignore-platform-reqs" ]
-```
-
-**Giải thích:** Định nghĩa môi trường Composer với ENTRYPOINT để chạy lệnh composer.
-
----
-
-### 🚦 **3. Chạy Lệnh Tạo Laravel**
-
-Thực thi lệnh để tạo ứng dụng Laravel:
-
-```bash
-docker compose run --rm composer create-project --prefer-dist laravel/laravel .
+```env
+DB_CONNECTION=mysql
+DB_HOST=mysql        # mysql container (define in docker-compose file)
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=thuanflu
+DB_PASSWORD=secret
 ```
 
 **Giải thích chi tiết:**
 
-- `docker compose run` : Chạy một lần dịch vụ composer từ file docker-compose.yaml.
+- Thay `DB_CONNECTION=sqlite` bằng `mysql` để dùng MySQL.
 
-- `--rm` : Xóa container sau khi hoàn thành, tối ưu tài nguyên.
+- `DB_HOST=mysql`: Trỏ đến dịch vụ mysql trong docker-compose.yaml, tận dụng DNS của Docker network.
 
-- `composer` : Tên dịch vụ trong docker-compose.yaml.
+- Cập nhật thông tin từ `mysql.env` (`DB_USERNAME`, `DB_PASSWORD`) để khớp với container MySQL.
 
-- `create-project` : Tạo dự án mới từ gói Composer.
+---
 
-- `--prefer-dist` : Tải bản phân phối (zip) thay vì clone, nhanh hơn.
+### 🚦 **3. Chạy Dịch Vụ Cụ Thể**
 
-- `laravel/laravel` : Gói chính thức của Laravel.
+Thay vì `docker compose up -d server php mysql`, chỉ chạy dịch vụ server:
 
-- `.` : Lưu mã nguồn vào thư mục hiện tại (.) trên host (qua bind mount `./src`).
+```bash
+docker compose up -d --build server
+```
 
-**Kết quả:** Thư mục `./src` chứa ứng dụng Laravel hoàn chỉnh.
+**Giải thích chi tiết:**
+
+- `docker compose up -d`: Khởi động dịch vụ ở chế độ nền (detached).
+
+- `--build`: Xây dựng lại image nếu có thay đổi trong Dockerfile (nếu không có thay đổi, Docker sử dụng cache để tối ưu thời gian).
+
+- `server`: Chỉ chạy dịch vụ server, nhưng `depends_on` đảm bảo php và mysql cũng khởi động trước.
+
+- **Tác dụng của depends_on:** Đảm bảo thứ tự khởi động, tránh lỗi kết nối từ server đến php hoặc mysql khi chúng chưa sẵn sàng.
 
 ---
 
 ## 📌 **Tóm Tắt Kiến Thức Quan Trọng**
 
-✅ **Composer Container:** Dùng để tạo Laravel với `docker compose run`.
+✅ **Chạy dịch vụ cụ thể:** Dùng `docker compose up -d --build server` với depends_on.
 
-✅ **Lệnh:** `docker compose run --rm composer create-project --prefer-dist laravel/laravel .` tạo dự án.
+✅ **Bind mount:** `./src:/var/www/html` cung cấp mã nguồn cho Nginx.
 
-✅ **Bind Mount:** `./src:/var/www/html` đồng bộ mã nguồn từ host.
+✅ **Cập nhật .env:** Đặt `DB_HOST=mysql` để kết nối với MySQL container.
 
-✅ **--prefer-dist:** Tải bản phân phối nhanh, hiệu quả.
+✅ **--build:** Xây lại image nếu cần, dùng cache nếu không thay đổi.
 
 ---
 
-### 🚀 **Tạo Laravel App dễ dàng với Composer Container!**
+### 🚀 **Khởi động dịch vụ cần thiết một cách hiệu quả với Docker Compose!**
