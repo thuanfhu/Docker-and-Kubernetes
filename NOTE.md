@@ -1,92 +1,96 @@
-# 📝 Using Docker Compose
-
-## 🚀 Giới Thiệu Docker Compose
-
-`Docker Compose` là công cụ quản lý nhiều container qua file `docker-compose.yaml`, giúp định nghĩa và chạy ứng dụng đa container. Chúng ta sẽ xây dựng một Utility Container để chạy `npm init`.
+# 📝 **Adding a Nginx (Web Server) Container**
 
 ---
 
-### 1. File Dockerfile
+## 🚀 **Tổng Quan**
 
-Tạo file `Dockerfile` với nội dung:
+Trong dự án **PHP Laravel Dockerized**, chúng ta thêm một container **Nginx** để xử lý các yêu cầu web, hoạt động như một web server cho ứng dụng Laravel. `Nginx` sẽ chuyển các yêu cầu PHP đến container PHP thông qua **FastCGI**.
 
-```dockerfile
-FROM node:14-alpine
-WORKDIR /app
-ENTRYPOINT ["npm"]
+---
+
+## 🔍 **Giải Thích File Cấu Hình**
+
+### 1. File `nginx.conf`
+
+File `nginx.conf` định nghĩa cách Nginx xử lý các yêu cầu HTTP:
+
+```nginx
+server {
+    listen 80;
+    index index.php index.html;
+    server_name localhost;
+    root /var/www/html/public;
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass php:3000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+    }
+}
 ```
 
-**Giải thích:**
+**Giải thích chi tiết:**
 
-- `FROM node:14-alpine`: Dùng image Node.js nhẹ.
+- **listen 80:** Nginx lắng nghe trên cổng 80 (HTTP mặc định).
 
-- `WORKDIR /app`: Đặt thư mục làm việc.
+- **index index.php index.html:** Ưu tiên file index.php (Laravel entry point) hoặc index.html.
 
-- `ENTRYPOINT ["npm"]`: Định nghĩa lệnh chính là npm.
+- **server_name localhost:** Tên server (dùng localhost trong môi trường dev).
+
+- **root /var/www/html/public:** Thư mục gốc cho ứng dụng, trỏ đến thư mục public của Laravel.
+
+- **location /**: Xử lý mọi yêu cầu, chuyển hướng đến index.php nếu không tìm thấy file.
+
+- **location ~ \.php$**: Xử lý file PHP, chuyển yêu cầu PHP đến container php qua fastcgi_pass.
 
 ---
 
-### 2. File docker-compose.yaml
+### 2. File `docker-compose.yaml`
 
-Tạo file `docker-compose.yaml` với nội dung:
+File `docker-compose.yaml` định nghĩa dịch vụ nginx:
 
 ```yaml
-name: utility-container
+name: PHP Laravel Dockerized
+
 services:
-  npm:
-    build: ./
-    stdin_open: true
-    tty: true
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - "8080:80"
     volumes:
-      - ./:/app
-    entrypoint:
-      - npm
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
 ```
 
-**Giải thích:**
+**Giải thích chi tiết:**
 
-- `name: utility-container`: Đặt tên dự án.
+- **name:** Tên dự án Docker Compose.
 
-- `services.npm`: Dịch vụ npm, build từ thư mục hiện tại (`build: ./`).
+- **services.nginx:** Dịch vụ Nginx, chạy container web server.
 
-- `stdin_open: true` và `tty: true`: Bật chế độ tương tác.
+- **image:** Dùng image nginx phiên bản stable-alpine (nhẹ, tối ưu).
 
-- `volumes: - ./:/app`: Ánh xạ thư mục host vào `/app`.
+- **ports:** Ánh xạ cổng 8080 trên host đến cổng 80 trong container (truy cập ứng dụng qua http://localhost:8080).
 
-- `entrypoint: - npm`: Định nghĩa lệnh chính (tương thích với Dockerfile).
+- **volumes:** Ánh xạ file nginx.conf từ thư mục ./nginx trên host vào /etc/nginx/nginx.conf trong container. `:ro` (read-only): Đảm bảo file chỉ đọc, không sửa đổi trong container, tăng bảo mật.
 
 ---
 
-### 3. Chạy Lệnh Với Docker Compose
+## 📌 **Tóm Tắt Kiến Thức Quan Trọng**
 
-Chạy container và thực thi `npm init` với cú pháp chuẩn:
+✅ **Nginx Container:** Dùng nginx:stable-alpine, xử lý yêu cầu web cho Laravel.
 
-```bash
-docker compose run --rm npm init
-```
+✅ **nginx.conf:** Định nghĩa cổng, root `/var/www/html/public`, chuyển yêu cầu PHP đến `php:3000`.
 
-**Giải thích:**
+✅ **docker-compose.yaml:** Ánh xạ cổng 8080:80, mount file config với `:ro` để bảo mật.
 
-- `docker compose run`: Chạy một dịch vụ từ file `docker-compose.yaml`.
-
-- `--rm`: Xóa container sau khi hoàn thành (theo tài liệu Docker, tối ưu hóa tài nguyên).
-
-- `npm`: Tên dịch vụ trong file `docker-compose.yaml`.
-
-- `init`: Tham số cho `ENTRYPOINT ["npm"]`, chạy `npm init`.
-
-**Kết quả:** Tạo file `package.json` trong thư mục host (`./`).
+✅ **FastCGI:** Kết nối Nginx và PHP qua `fastcgi_pass`.
 
 ---
 
-## 📌 Tóm Tắt Kiến Thức Quan Trọng
-
-✅ Docker Compose: Quản lý container qua `docker-compose.yaml`.
-
-✅ Dockerfile: Định nghĩa môi trường với `ENTRYPOINT ["npm"]`.
-
-✅ Chạy lệnh: `docker compose run --rm npm init` để thực thi `npm init`.
-
-✅ Volume: Ánh xạ `./:/app` để lưu kết quả.
-
-### 🚀 Sử dụng Docker Compose để quản lý Utility Container hiệu quả!
+### 🚀 **Thêm Nginx Container để chạy ứng dụng Laravel hiệu quả!**
