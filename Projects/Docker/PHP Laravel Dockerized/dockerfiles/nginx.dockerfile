@@ -9,5 +9,3 @@ RUN mv nginx.conf default.conf
 WORKDIR /var/www/html
 
 COPY src .
-
-
