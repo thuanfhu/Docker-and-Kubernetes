@@ -1,39 +1,23 @@
-# 📝 **Adding a Composer Utility Container**
+# 📝 **Creating a Laravel App via the Composer Utility Container**
 
 ---
 
 ## 🚀 **Tổng Quan**
 
-Thêm container **Composer** để quản lý các thư viện PHP (như Laravel dependencies) trong dự án. Container này được định nghĩa trong `docker-compose.yaml` và xây dựng từ `composer.dockerfile`, sử dụng bind mount để đồng bộ mã nguồn.
+Sử dụng container **Composer** trong Docker Compose để tạo ứng dụng Laravel mới, tận dụng môi trường cách ly mà không cần cài Composer trên máy host. Lệnh `docker compose run` sẽ thực thi tác vụ này.
 
 ---
 
-## 🔍 **Giải Thích File Cấu Hình**
+## 🔍 **Thực Hiện Tạo Ứng Dụng**
 
-### 1. File `docker-compose.yaml`
+### 🛠️ **1. File `docker-compose.yaml`**
 
-Cập nhật file `docker-compose.yaml` với dịch vụ composer:
+Dịch vụ composer đã được định nghĩa:
 
 ```yaml
 name: PHP Laravel Dockerized
 
 services:
-  nginx:
-    image: nginx:stable-alpine
-    ports:
-      - "8080:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-  php:
-    build:
-      context: ./dockerfiles
-      dockerfile: php.dockerfile
-    volumes:
-      - ./src:/var/www/html:delegated
-  mysql:
-    image: mysql:9.3.0
-    env-file:
-      - ./env/mysql.env
   composer:
     build:
       context: ./dockerfiles
@@ -42,23 +26,13 @@ services:
       - ./src:/var/www/html
 ```
 
-**Giải thích chi tiết:**
-
-- **services.composer:** Dịch vụ Composer, xây dựng từ `composer.dockerfile` trong `./dockerfiles`.
-
-- **build.context:** Thư mục chứa file `composer.dockerfile`.
-
-- **build.dockerfile:** Chỉ định file build.
-
-- **volumes:** Bind mount thư mục `./src` (mã nguồn Laravel) vào `/var/www/html` trong container.
-
-> Lý do bind mount: Cần đồng bộ mã nguồn và thư viện (như vendor) giữa host và container Composer. Vì Composer tải các gói phụ thuộc vào `/var/www/html`, bind mount đảm bảo các thay đổi (như composer install) được phản ánh trực tiếp trên host, phục vụ cho container PHP.
+**Giải thích:** Dịch vụ composer ánh xạ `./src` vào `/var/www/html` để lưu mã nguồn Laravel.
 
 ---
 
-### 2. File `composer.dockerfile`
+### 🛠️ **2. File `composer.dockerfile`**
 
-Tạo file `composer.dockerfile` với nội dung:
+File composer.dockerfile đã có:
 
 ```dockerfile
 FROM composer:latest
@@ -66,28 +40,48 @@ WORKDIR /var/www/html
 ENTRYPOINT [ "composer", "--ignore-platform-reqs" ]
 ```
 
+**Giải thích:** Định nghĩa môi trường Composer với ENTRYPOINT để chạy lệnh composer.
+
+---
+
+### 🚦 **3. Chạy Lệnh Tạo Laravel**
+
+Thực thi lệnh để tạo ứng dụng Laravel:
+
+```bash
+docker compose run --rm composer create-project --prefer-dist laravel/laravel .
+```
+
 **Giải thích chi tiết:**
 
-- **FROM composer:latest:** Dùng image chính thức của Composer, chứa công cụ quản lý gói PHP.
+- `docker compose run` : Chạy một lần dịch vụ composer từ file docker-compose.yaml.
 
-- **WORKDIR /var/www/html:** Đặt thư mục làm việc là nơi mã nguồn Laravel được mount.
+- `--rm` : Xóa container sau khi hoàn thành, tối ưu tài nguyên.
 
-- **ENTRYPOINT [ "composer", "--ignore-platform-reqs" ]:** ENTRYPOINT định nghĩa lệnh chính là composer, chạy khi container khởi động. `--ignore-platform-reqs` bỏ qua các yêu cầu về phiên bản PHP/extension trên host/container, cho phép cài đặt gói ngay cả khi môi trường không khớp.
+- `composer` : Tên dịch vụ trong docker-compose.yaml.
 
-> Tại sao cần `--ignore-platform-reqs`? Trong môi trường phát triển, host có thể không có PHP hoặc phiên bản không khớp với container. Tùy chọn này đảm bảo Composer hoạt động, nhưng cần kiểm tra tương thích khi triển khai sản phẩm.
+- `create-project` : Tạo dự án mới từ gói Composer.
+
+- `--prefer-dist` : Tải bản phân phối (zip) thay vì clone, nhanh hơn.
+
+- `laravel/laravel` : Gói chính thức của Laravel.
+
+- `.` : Lưu mã nguồn vào thư mục hiện tại (.) trên host (qua bind mount `./src`).
+
+**Kết quả:** Thư mục `./src` chứa ứng dụng Laravel hoàn chỉnh.
 
 ---
 
 ## 📌 **Tóm Tắt Kiến Thức Quan Trọng**
 
-✅ **Composer Container:** Xây từ composer:latest, dùng để quản lý gói PHP.
+✅ **Composer Container:** Dùng để tạo Laravel với `docker compose run`.
 
-✅ **Bind Mount:** Ánh xạ ./src:/var/www/html để đồng bộ mã nguồn và thư viện.
+✅ **Lệnh:** `docker compose run --rm composer create-project --prefer-dist laravel/laravel .` tạo dự án.
 
-✅ **ENTRYPOINT [ "composer", "--ignore-platform-reqs" ]:** Chạy composer với tùy chọn bỏ qua yêu cầu môi trường, đảm bảo cài đặt linh hoạt.
+✅ **Bind Mount:** `./src:/var/www/html` đồng bộ mã nguồn từ host.
 
-✅ **Mục đích:** Hỗ trợ cài đặt dependencies (như composer install) cho Laravel.
+✅ **--prefer-dist:** Tải bản phân phối nhanh, hiệu quả.
 
 ---
 
-### 🚀 **Thêm Composer Container để quản lý thư viện dễ dàng!**
+### 🚀 **Tạo Laravel App dễ dàng với Composer Container!**

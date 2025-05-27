@@ -15,7 +15,7 @@ services:
       - ./src:/var/www/html:delegated
   mysql:
     image: mysql:9.3.0
-    env-file:
+    env_file:
       - ./env/mysql.env
   composer:
     build:
