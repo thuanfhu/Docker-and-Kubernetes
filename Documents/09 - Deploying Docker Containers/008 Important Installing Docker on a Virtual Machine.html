@@ -1,0 +1,6 @@
+<p>In the next lecture, we'll install Docker on a virtual EC2 instance.</p><p>Please note that the following command (which is used in the next lecture)&nbsp;will unfortunately <strong>not work anymore</strong>:</p><pre class="prettyprint linenums">amazon-linux-extras install docker</pre><p><strong>Instead, use this approach / these commands:</strong></p><pre class="prettyprint linenums">sudo yum update -y
+sudo yum -y install docker
+
+sudo service docker start
+
+sudo usermod -a -G docker ec2-user</pre><p>Make sure to <strong>log out + back in</strong> after running these commands.</p><p>Once you logged back in, run this command:</p><pre class="prettyprint linenums">sudo systemctl enable docker</pre><p>Thereafter, you can check whether Docker is available by running:</p><pre class="prettyprint linenums">docker version</pre><p>Also see:&nbsp;<a href="https://stackoverflow.com/questions/53918841/how-to-install-docker-on-amazon-linux2/61708497#61708497" rel="noopener noreferrer" target="_blank">https://stackoverflow.com/questions/53918841/how-to-install-docker-on-amazon-linux2/61708497#61708497</a></p>

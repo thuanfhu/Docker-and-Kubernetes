@@ -1,0 +1,18 @@
+
+007 Getting-Started-with-AWS-Full-Guide
+https://academind.com/learn/aws/the-basics/getting-started-with-aws/
+
+007 A-Closer-Look-at-EC2
+https://academind.com/learn/aws/the-basics/ec2-for-humans/
+
+007 Understanding-VPC-Subnets
+https://academind.com/learn/aws/the-basics/aws-vpc-subnets/
+
+007 Connecting-to-Instances
+https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connect-to-linux-instance.html
+
+018 AWS-Getting-Started-Tutorial
+https://academind.com/learn/aws/the-basics/
+
+019 Adding-a-Load-Balancer-to-a-Fargate-Task-for-fixed-domain-names-
+https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-load-balancing.html
