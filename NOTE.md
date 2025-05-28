@@ -1,75 +1,44 @@
-# 📝 Pushing our local Image to the Cloud
+# 📝 Running & Publishing the App (on EC2)
 
 ---
 
 ## 🚀 Tổng Quan
 
-Có hai cách để triển khai ứng dụng lên AWS EC2: `push mã nguồn trực tiếp` hoặc `push image đã xây dựng`. Nên chọn phương pháp xây dựng image cục bộ (Option 2) và push lên Docker Hub để triển khai.
+Hướng dẫn chạy và publish ứng dụng Node.js trên AWS EC2 bằng Docker sau khi truy cập qua SSH.
 
 ---
 
-## 🔍 Bảng So Sánh Hai Phương Pháp Triển Khai
+## 🔍 Các Bước Thực Hiện
 
-| Phương Pháp 1: Triển Khai Mã Nguồn                | Phương Pháp 2: Triển Khai Image Đã Xây Dựng         |
-|---------------------------------------------------|-----------------------------------------------------|
-| 🛠️ Xây dựng image trên máy chủ từ xa              | 🏗️ Xây dựng image trước khi triển khai (ví dụ: trên máy cục bộ) |
-| 📤 Đẩy mã nguồn lên máy chủ từ xa, chạy docker build rồi docker run | 🚀 Chỉ cần thực thi docker run                      |
-| 🤔 Độ phức tạp không cần thiết                     | ✅ Tránh công việc không cần thiết trên máy chủ từ xa |
-
----
-
-## 🔧 Các Bước Triển Khai Với Option 2
-
-### Xây dựng image cục bộ
+### Chạy container
 
 ```sh
-docker build -t thuanphu1612/nodejs-application:deploy .
+sudo docker run -p 80:80 --rm --name nodejs-container -d thuanphu1612/nodejs-application:deploy
 ```
 
-`Giải thích`:  
+**Giải thích:**  
+- `sudo`: Chạy với quyền root để đảm bảo đủ quyền.  
 
-- Tạo image với tên `thuanphu1612/nodejs-application:deploy` từ Dockerfile trong thư mục hiện tại (`.`).  
-Tên này khớp với repository trên Docker Hub, nên không cần dùng `docker tag`.  
+- `-p 80:80`: Ánh xạ cổng 80 từ host (EC2) đến cổng 80 trong container.  
 
-- Nếu đổi tên (ví dụ: `thuanphu1612/new-name:deploy`), image ID vẫn giữ nguyên, chỉ tên thay đổi (xem bảng dưới).
+- `--rm`: Xóa container khi dừng (tối ưu tài nguyên).  
 
----
+- `--name nodejs-container`: Đặt tên container.  
 
-| Tên Image                          | Image ID   | Ghi Chú                        |
-|-------------------------------------|------------|--------------------------------|
-| thuanphu1612/old-name:deploy        | abc123...  | Image gốc                      |
-| thuanphu1612/new-name:deploy        | abc123...  | Cùng ID, chỉ đổi tên bằng tag  |
+- `-d`: Chạy container ở chế độ nền (detached).  
 
----
+- `thuanphu1612/nodejs-application:deploy`: Image đã đẩy lên Docker Hub.
 
-### Đẩy image lên Docker Hub
-
-```sh
-docker push thuanphu1612/nodejs-application:deploy
-```
-
-`Giải thích`: Tải image lên repository `thuanphu1612/nodejs-application` trên Docker Hub với tag `deploy`.
-
----
-
-### Xác thực nếu cần
-
-```sh
-docker login
-```
-
-`Giải thích`: Nếu gặp lỗi xác thực, chạy `docker login`, nhập username và password Docker Hub để cấp quyền đẩy image.
+> Lưu ý: Phải mở cổng 80 (HTTP công khai) trong security group (inbound rules) của EC2 để có thể truy cập ứng dụng qua public DNS hoặc public IP.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Phương pháp: Chọn Option 2 để xây dựng image cục bộ, đẩy lên Docker Hub.
+✅ Chạy container: Dùng `sudo docker run` với các tùy chọn phù hợp để khởi động ứng dụng.
 
-✅ Lệnh: `docker build -t ...`, `docker push`, và `docker login` nếu cần.
-
-✅ Image ID: Giữ nguyên khi đổi tên bằng `docker tag`, chỉ tên thay đổi.
+✅ Cấu hình mạng: Mở cổng 80 trong security group để truy cập public DNS/IP.
 
 ---
 
-### 🚀 Đẩy image thành công lên cloud và triển khai dễ dàng trên AWS EC2!
+### 🚀 Chạy và xuất bản ứng dụng Node.js thành công trên EC2!
