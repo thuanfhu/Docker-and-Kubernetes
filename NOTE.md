@@ -1,53 +1,75 @@
-# 📝 Installing Docker on a Virtual Machine
+# 📝 Pushing our local Image to the Cloud
+
+---
 
 ## 🚀 Tổng Quan
 
-Hướng dẫn cài đặt Docker trên một máy ảo AWS EC2 với Amazon Linux, đảm bảo môi trường sẵn sàng để chạy container.
+Có hai cách để triển khai ứng dụng lên AWS EC2: `push mã nguồn trực tiếp` hoặc `push image đã xây dựng`. Nên chọn phương pháp xây dựng image cục bộ (Option 2) và push lên Docker Hub để triển khai.
 
 ---
 
-## 🔍 Các Bước Cài Đặt
+## 🔍 Bảng So Sánh Hai Phương Pháp Triển Khai
 
-### Cập nhật hệ thống
-
-```sh
-sudo yum update -y
-```
-
-`Giải thích`: Cập nhật tất cả các gói trên Amazon Linux để đảm bảo hệ thống chạy phiên bản mới nhất, sử dụng `-y` để tự động xác nhận.
+| Phương Pháp 1: Triển Khai Mã Nguồn                | Phương Pháp 2: Triển Khai Image Đã Xây Dựng         |
+|---------------------------------------------------|-----------------------------------------------------|
+| 🛠️ Xây dựng image trên máy chủ từ xa              | 🏗️ Xây dựng image trước khi triển khai (ví dụ: trên máy cục bộ) |
+| 📤 Đẩy mã nguồn lên máy chủ từ xa, chạy docker build rồi docker run | 🚀 Chỉ cần thực thi docker run                      |
+| 🤔 Độ phức tạp không cần thiết                     | ✅ Tránh công việc không cần thiết trên máy chủ từ xa |
 
 ---
 
-### Cài đặt Docker
+## 🔧 Các Bước Triển Khai Với Option 2
+
+### Xây dựng image cục bộ
 
 ```sh
-sudo amazon-linux-extras install docker
+docker build -t thuanphu1612/nodejs-application:deploy .
 ```
 
-`Giải thích`: Sử dụng lệnh AWS-specific `amazon-linux-extras` để cài Docker, được tối ưu cho Amazon Linux.  
+`Giải thích`:  
 
-> Lưu ý: Đây là cách cài đặt đặc trưng cho EC2, nhưng nếu dùng nhà cung cấp khác, bạn nên tham khảo hướng dẫn chính thức trên Docker Docs (phần "Server").
+- Tạo image với tên `thuanphu1612/nodejs-application:deploy` từ Dockerfile trong thư mục hiện tại (`.`).  
+Tên này khớp với repository trên Docker Hub, nên không cần dùng `docker tag`.  
+
+- Nếu đổi tên (ví dụ: `thuanphu1612/new-name:deploy`), image ID vẫn giữ nguyên, chỉ tên thay đổi (xem bảng dưới).
 
 ---
 
-### Khởi động Docker
+| Tên Image                          | Image ID   | Ghi Chú                        |
+|-------------------------------------|------------|--------------------------------|
+| thuanphu1612/old-name:deploy        | abc123...  | Image gốc                      |
+| thuanphu1612/new-name:deploy        | abc123...  | Cùng ID, chỉ đổi tên bằng tag  |
+
+---
+
+### Đẩy image lên Docker Hub
 
 ```sh
-sudo service docker start
+docker push thuanphu1612/nodejs-application:deploy
 ```
 
-`Giải thích`: Khởi động dịch vụ Docker với sudo để chạy dưới quyền root, đảm bảo đầy đủ quyền hạn. Sau lệnh này, bạn có thể bắt đầu sử dụng các lệnh Docker như `docker run`.
+`Giải thích`: Tải image lên repository `thuanphu1612/nodejs-application` trên Docker Hub với tag `deploy`.
+
+---
+
+### Xác thực nếu cần
+
+```sh
+docker login
+```
+
+`Giải thích`: Nếu gặp lỗi xác thực, chạy `docker login`, nhập username và password Docker Hub để cấp quyền đẩy image.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Cập nhật: `sudo yum update -y` đảm bảo hệ thống mới nhất.
+✅ Phương pháp: Chọn Option 2 để xây dựng image cục bộ, đẩy lên Docker Hub.
 
-✅ Cài Docker: `sudo amazon-linux-extras install docker` cho AWS EC2, hoặc dùng Docker Docs cho nhà cung cấp khác.
+✅ Lệnh: `docker build -t ...`, `docker push`, và `docker login` nếu cần.
 
-✅ Khởi động: `sudo service docker start` kích hoạt Docker để sẵn sàng.
+✅ Image ID: Giữ nguyên khi đổi tên bằng `docker tag`, chỉ tên thay đổi.
 
 ---
 
-### 🚀 Cài đặt Docker thành công trên AWS EC2 để bắt đầu container hóa!
+### 🚀 Đẩy image thành công lên cloud và triển khai dễ dàng trên AWS EC2!
