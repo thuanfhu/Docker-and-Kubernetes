@@ -8,10 +8,24 @@ So sánh cách triển khai thủ công với cách sử dụng dịch vụ qu�
 
 ## 🔍 Bảng So Sánh
 
-| Triển Khai Thủ Công<br/>(Máy Chủ Tự Quản Lý, ví dụ: AWS EC2) | Triển Khai Tự Động<br/>(Dịch Vụ Quản Lý, ví dụ: AWS ECS) |
-| :----------------------------------------------------------- | :------------------------------------------------------- |
-| 🖥️ Bạn cần tạo, quản lý, cập nhật, giám sát, mở rộng thủ công | ☁️ Tạo, quản lý, cập nhật, giám sát, mở rộng tự động hóa  |
-| 🌟 Tuyệt vời nếu bạn là admin có kinh nghiệm hoặc chuyên gia cloud | 🚀 Tuyệt vời nếu bạn chỉ muốn triển khai ứng dụng/container của mình |
+<table>
+  <thead>
+    <tr>
+      <th style="text-align:center;">Triển Khai Thủ Công<br/>(Máy Chủ Tự Quản Lý, ví dụ: AWS EC2)</th>
+      <th style="text-align:center;">Triển Khai Tự Động<br/>(Dịch Vụ Quản Lý, ví dụ: AWS ECS)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align:left;">🖥️ Bạn cần tạo, quản lý, cập nhật, giám sát, mở rộng thủ công</td>
+      <td style="text-align:left;">☁️ Tạo, quản lý, cập nhật, giám sát, mở rộng tự động hóa</td>
+    </tr>
+    <tr>
+      <td style="text-align:left;">🌟 Tuyệt vời nếu bạn là admin có kinh nghiệm hoặc chuyên gia cloud</td>
+      <td style="text-align:left;">🚀 Tuyệt vời nếu bạn chỉ muốn triển khai ứng dụng/container của mình</td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 
