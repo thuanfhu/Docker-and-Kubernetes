@@ -1,44 +1,75 @@
-# 📝 Running & Publishing the App (on EC2)
-
----
+# 📝 **Managing & Updating the Container / Image**
 
 ## 🚀 Tổng Quan
 
-Hướng dẫn chạy và publish ứng dụng Node.js trên AWS EC2 bằng Docker sau khi truy cập qua SSH.
+Quy trình cập nhật ứng dụng Node.js sau khi thêm chức năng mới: build và push image từ host, sau đó cập nhật container trên AWS EC2.
 
 ---
 
-## 🔍 Các Bước Thực Hiện
+## 🔍 Các Bước Quản Lý và Cập Nhật
 
-### Chạy container
+### **Trên Host Machine (Build & Push Image)**
 
-```sh
-sudo docker run -p 80:80 --rm --name nodejs-container -d thuanphu1612/nodejs-application:deploy
+**Build image mới**
+
+```bash
+docker build -t thuanphu1612/nodejs-application:deploy .
 ```
 
-**Giải thích:**  
-- `sudo`: Chạy với quyền root để đảm bảo đủ quyền.  
+_Giải thích:_ Tạo image mới từ mã nguồn đã cập nhật, gắn tag `thuanphu1612/nodejs-application:deploy`.
 
-- `-p 80:80`: Ánh xạ cổng 80 từ host (EC2) đến cổng 80 trong container.  
+---
 
-- `--rm`: Xóa container khi dừng (tối ưu tài nguyên).  
+**Push image lên Docker Hub**
 
-- `--name nodejs-container`: Đặt tên container.  
+```bash
+docker push thuanphu1612/nodejs-application:deploy
+```
 
-- `-d`: Chạy container ở chế độ nền (detached).  
+_Giải thích:_ Đẩy image mới lên repository trên Docker Hub để triển khai.
 
-- `thuanphu1612/nodejs-application:deploy`: Image đã đẩy lên Docker Hub.
+---
 
-> Lưu ý: Phải mở cổng 80 (HTTP công khai) trong security group (inbound rules) của EC2 để có thể truy cập ứng dụng qua public DNS hoặc public IP.
+### **Trên AWS EC2 (Cập Nhật Container)**
+
+**Dừng container cũ**
+
+```bash
+sudo docker stop <container cũ>
+```
+
+_Giải thích:_ Dừng container đang chạy (thay `<container cũ>` bằng tên hoặc ID container, ví dụ: `nodejs-container`)
+
+---
+
+**Tải image mới**
+
+```bash
+sudo docker pull thuanphu1612/nodejs-application:deploy
+```
+
+_Giải thích:_ Tải phiên bản mới nhất của image từ Docker Hub.
+
+---
+
+**Chạy container mới**
+
+```bash
+sudo docker run --rm -p 80:80 --name nodejs-container -d thuanphu1612/nodejs-application:deploy
+```
+
+_Giải thích:_ Khởi động container mới với image vừa tải, ánh xạ cổng 80, tự xóa khi dừng (`--rm`), và chạy ở chế độ nền (`-d`).
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Chạy container: Dùng `sudo docker run` với các tùy chọn phù hợp để khởi động ứng dụng.
+✅ Host: Build và push image mới với `docker build` và `docker push`.
 
-✅ Cấu hình mạng: Mở cổng 80 trong security group để truy cập public DNS/IP.
+✅ EC2: Dừng container cũ, tải image mới (`docker pull`), và chạy container mới.
+
+✅ Tối ưu: Dùng `--rm` để dọn dẹp container sau khi dừng.
 
 ---
 
-### 🚀 Chạy và xuất bản ứng dụng Node.js thành công trên EC2!
+### 🚀 **Cập nhật ứng dụng Node.js trên EC2 thành công!**
