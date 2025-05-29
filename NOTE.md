@@ -1,75 +1,27 @@
-# 📝 **Managing & Updating the Container / Image**
+# 📝 Disadvantages of our Current Approach
 
 ## 🚀 Tổng Quan
 
-Quy trình cập nhật ứng dụng Node.js sau khi thêm chức năng mới: build và push image từ host, sau đó cập nhật container trên AWS EC2.
+Phương pháp **"Do-it-yourself"** khi quản lý máy chủ từ xa như **AWS EC2** có nhiều nhược điểm.
 
----
+🖥️ Chúng ta hoàn toàn sở hữu máy chủ, đồng nghĩa với việc phải chịu trách nhiệm quản lý và bảo mật nó.
 
-## 🔍 Các Bước Quản Lý và Cập Nhật
+👮‍♂️ Điều này bao gồm việc giữ phần mềm thiết yếu luôn cập nhật, cũng như quản lý mạng, nhóm bảo mật và tường lửa.
 
-### **Trên Host Machine (Build & Push Image)**
+🌐 Hơn nữa, việc SSH vào máy để quản lý thường gây khó chịu và mất thời gian.
 
-**Build image mới**
-
-```bash
-docker build -t thuanphu1612/nodejs-application:deploy .
-```
-
-_Giải thích:_ Tạo image mới từ mã nguồn đã cập nhật, gắn tag `thuanphu1612/nodejs-application:deploy`.
-
----
-
-**Push image lên Docker Hub**
-
-```bash
-docker push thuanphu1612/nodejs-application:deploy
-```
-
-_Giải thích:_ Đẩy image mới lên repository trên Docker Hub để triển khai.
-
----
-
-### **Trên AWS EC2 (Cập Nhật Container)**
-
-**Dừng container cũ**
-
-```bash
-sudo docker stop <container cũ>
-```
-
-_Giải thích:_ Dừng container đang chạy (thay `<container cũ>` bằng tên hoặc ID container, ví dụ: `nodejs-container`)
-
----
-
-**Tải image mới**
-
-```bash
-sudo docker pull thuanphu1612/nodejs-application:deploy
-```
-
-_Giải thích:_ Tải phiên bản mới nhất của image từ Docker Hub.
-
----
-
-**Chạy container mới**
-
-```bash
-sudo docker run --rm -p 80:80 --name nodejs-container -d thuanphu1612/nodejs-application:deploy
-```
-
-_Giải thích:_ Khởi động container mới với image vừa tải, ánh xạ cổng 80, tự xóa khi dừng (`--rm`), và chạy ở chế độ nền (`-d`).
+🤔 Đặc biệt, với vai trò là **Software Engineer**, chúng ta không muốn bị kéo vào những công việc của **Network Engineer** như cấu hình mạng hay bảo trì hạ tầng, mà chỉ muốn tập trung vào phát triển ứng dụng.
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ Host: Build và push image mới với `docker build` và `docker push`.
+✅ **Sở hữu:** Chịu trách nhiệm quản lý và bảo mật máy chủ.
 
-✅ EC2: Dừng container cũ, tải image mới (`docker pull`), và chạy container mới.
+✅ **Công việc:** Cập nhật phần mềm, quản lý mạng và tường lửa.
 
-✅ Tối ưu: Dùng `--rm` để dọn dẹp container sau khi dừng.
+✅ **Bất tiện:** SSH thủ công và làm việc ngoài chuyên môn Software Engineer.
 
 ---
 
-### 🚀 **Cập nhật ứng dụng Node.js trên EC2 thành công!**
+### 🚀 Nhận diện nhược điểm để tối ưu quản lý máy chủ từ xa
