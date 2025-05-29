@@ -1,27 +1,26 @@
-# 📝 Disadvantages of our Current Approach
+# 📝 **From Manual Deployment to Managed Services**
 
 ## 🚀 Tổng Quan
 
-Phương pháp **"Do-it-yourself"** khi quản lý máy chủ từ xa như **AWS EC2** có nhiều nhược điểm.
+So sánh cách triển khai thủ công với cách sử dụng dịch vụ quản lý tự động cho máy chủ từ xa như **AWS EC2** và **ECS**.
 
-🖥️ Chúng ta hoàn toàn sở hữu máy chủ, đồng nghĩa với việc phải chịu trách nhiệm quản lý và bảo mật nó.
+---
 
-👮‍♂️ Điều này bao gồm việc giữ phần mềm thiết yếu luôn cập nhật, cũng như quản lý mạng, nhóm bảo mật và tường lửa.
+## 🔍 Bảng So Sánh
 
-🌐 Hơn nữa, việc SSH vào máy để quản lý thường gây khó chịu và mất thời gian.
-
-🤔 Đặc biệt, với vai trò là **Software Engineer**, chúng ta không muốn bị kéo vào những công việc của **Network Engineer** như cấu hình mạng hay bảo trì hạ tầng, mà chỉ muốn tập trung vào phát triển ứng dụng.
+| Triển Khai Thủ Công<br/>(Máy Chủ Tự Quản Lý, ví dụ: AWS EC2) | Triển Khai Tự Động<br/>(Dịch Vụ Quản Lý, ví dụ: AWS ECS) |
+| :----------------------------------------------------------- | :------------------------------------------------------- |
+| 🖥️ Bạn cần tạo, quản lý, cập nhật, giám sát, mở rộng thủ công | ☁️ Tạo, quản lý, cập nhật, giám sát, mở rộng tự động hóa  |
+| 🌟 Tuyệt vời nếu bạn là admin có kinh nghiệm hoặc chuyên gia cloud | 🚀 Tuyệt vời nếu bạn chỉ muốn triển khai ứng dụng/container của mình |
 
 ---
 
 ## 📌 Tóm Tắt Kiến Thức Quan Trọng
 
-✅ **Sở hữu:** Chịu trách nhiệm quản lý và bảo mật máy chủ.
+✅ **Thủ công:** Yêu cầu tự quản lý mọi khía cạnh, phù hợp với chuyên gia cloud.
 
-✅ **Công việc:** Cập nhật phần mềm, quản lý mạng và tường lửa.
-
-✅ **Bất tiện:** SSH thủ công và làm việc ngoài chuyên môn Software Engineer.
+✅ **Tự động:** Dịch vụ quản lý xử lý mọi thứ, tối ưu cho triển khai nhanh.
 
 ---
 
-### 🚀 Nhận diện nhược điểm để tối ưu quản lý máy chủ từ xa
+### 🚀 **Chuyển từ triển khai thủ công sang dịch vụ quản lý để tối ưu hiệu quả!**
