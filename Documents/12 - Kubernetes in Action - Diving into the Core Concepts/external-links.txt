@@ -1,0 +1,18 @@
+
+003 Minikube-Setup-Instructions-All-OS-
+https://kubernetes.io/docs/tasks/tools/install-minikube/
+
+003 kubectl-Setup-Instructions-All-OS-
+https://kubernetes.io/docs/tasks/tools/install-kubectl/
+
+004 Minikube-Setup
+https://kubernetes.io/docs/tasks/tools/install-minikube/
+
+004 kubectl-Setup-macOS-
+https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-with-homebrew-on-macos
+
+005 Minikube-Setup
+https://kubernetes.io/docs/tasks/tools/install-minikube/
+
+005 kubectl-Setup-Windows-
+https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-on-windows-using-chocolatey-or-scoop
